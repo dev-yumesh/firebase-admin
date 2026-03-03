@@ -5,18 +5,18 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
-  BoxCubeIcon,
-  CalenderIcon,
-  ChevronDownIcon,
-  GridIcon,
-  HorizontaLDots,
-  ListIcon,
-  PageIcon,
-  PieChartIcon,
-  PlugInIcon,
-  TableIcon,
-  UserCircleIcon,
-} from "../icons/index";
+  Box as BoxCubeIcon,
+  Calendar as CalenderIcon,
+  ChevronDown as ChevronDownIcon,
+  LayoutGrid as GridIcon,
+  MoreHorizontal as HorizontaLDots,
+  List as ListIcon,
+  FileText as PageIcon,
+  PieChart as PieChartIcon,
+  Plug as PlugInIcon,
+  Table as TableIcon,
+  UserRound as UserCircleIcon,
+} from "lucide-react";
 import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {

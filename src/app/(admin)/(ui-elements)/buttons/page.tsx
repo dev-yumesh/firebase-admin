@@ -1,7 +1,7 @@
 import ComponentCard from "@/components/common/ComponentCard";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Button from "@/components/ui/button/Button";
-import { BoxIcon } from "@/icons";
+import { Box as BoxIcon } from "lucide-react";
 import { Metadata } from "next";
 import React from "react";
 
