@@ -3,282 +3,43 @@ import ComponentCard from '@/components/common/ComponentCard'
 import PageBreadcrumb from '@/components/common/PageBreadCrumb'
 import AddMenuForm from '@/components/form/AddMenuForm'
 import AppTable from '@/components/tables/AppTable'
-import BasicTableOne from '@/components/tables/BasicTableOne'
 import Badge from '@/components/ui/badge/Badge'
 import Button from '@/components/ui/button/Button'
 import Image from 'next/image'
-import React, { useState } from 'react'
-
-const foodCategoriesMaster = [
-  {
-    id: 1,
-    slug: "starters",
-    title: "Starters",
-    description: "Light dishes served before the main course.",
-    logo: "starters.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 1,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 2,
-    slug: "soups",
-    title: "Soups",
-    description: "Warm and flavorful liquid-based dishes.",
-    logo: "soups.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 2,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 3,
-    slug: "salads-raita",
-    title: "Salads & Raita",
-    description: "Fresh salads and yogurt-based sides.",
-    logo: "salads.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 3,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 4,
-    slug: "main-course-veg",
-    title: "Main Course - Veg",
-    description: "Vegetarian main course dishes.",
-    logo: "veg-main.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 4,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 5,
-    slug: "main-course-non-veg",
-    title: "Main Course - Non Veg",
-    description: "Non-vegetarian main course dishes.",
-    logo: "nonveg-main.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 5,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 6,
-    slug: "rice-biryani",
-    title: "Rice & Biryani",
-    description: "Rice-based specialties and biryanis.",
-    logo: "rice.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 6,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 7,
-    slug: "breads",
-    title: "Breads",
-    description: "Indian breads and baked flatbreads.",
-    logo: "breads.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 7,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 8,
-    slug: "chinese",
-    title: "Chinese",
-    description: "Popular Indo-Chinese dishes.",
-    logo: "chinese.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 8,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 9,
-    slug: "fast-food",
-    title: "Fast Food",
-    description: "Quick and ready-to-eat meals.",
-    logo: "fastfood.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 9,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 10,
-    slug: "street-food",
-    title: "Street Food",
-    description: "Local and roadside specialties.",
-    logo: "streetfood.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 10,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 11,
-    slug: "south-indian",
-    title: "South Indian",
-    description: "Traditional South Indian dishes.",
-    logo: "southindian.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 11,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 12,
-    slug: "bbq-grill",
-    title: "BBQ & Grill",
-    description: "Grilled and barbecue specialties.",
-    logo: "bbq.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 12,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 13,
-    slug: "beverages",
-    title: "Beverages",
-    description: "Refreshing drinks and beverages.",
-    logo: "beverages.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 13,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 14,
-    slug: "desserts",
-    title: "Desserts",
-    description: "Sweet dishes served after meals.",
-    logo: "desserts.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 14,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 15,
-    slug: "breakfast",
-    title: "Breakfast",
-    description: "Morning meals and light dishes.",
-    logo: "breakfast.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 15,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 16,
-    slug: "snacks",
-    title: "Snacks",
-    description: "Light bites for anytime hunger.",
-    logo: "snacks.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 16,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 17,
-    slug: "bakery",
-    title: "Bakery",
-    description: "Freshly baked breads and sweets.",
-    logo: "bakery.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 17,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 18,
-    slug: "pizza",
-    title: "Pizza",
-    description: "Italian style baked pizzas.",
-    logo: "pizza.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 18,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 19,
-    slug: "burgers",
-    title: "Burgers",
-    description: "Veg and non-veg burger varieties.",
-    logo: "burgers.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 19,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 20,
-    slug: "specials",
-    title: "Specials / Chef Special",
-    description: "Exclusive dishes recommended by the chef.",
-    logo: "specials.png",
-    status: "active",
-    isActive: true,
-    sortOrder: 20,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-];
+import React, { useEffect, useState } from 'react'
+import { Pencil as EditIcon } from 'lucide-react'
+import { storage, ID } from '@/lib/appwriteServices'
+import { env } from '../../../../config/env.config'
 
 export interface FoodCategory {
-  id: number;
+  id: string | number;
   slug: string;
   title: string;
   description: string;
-  logo: string;
+  logo?: string;
   status: string;
   isActive: boolean;
   sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 const columns = [
   {
     header: "Logo",
     accessor: "logo",
-    render: (row: FoodCategory) => (
-      <div className="w-10 h-10 rounded overflow-hidden">
-        <Image
-          src={`/images/categories/${row.logo}`}
-          alt={row.title}
-          width={40}
-          height={40}
-        />
-      </div>
-    ),
+    
+    render: (row: FoodCategory) =>
+      row.logo ? (
+        <div className="w-10 h-10 rounded overflow-hidden">
+          <Image
+            src={row.logo}
+            alt={row.title}
+            width={40}
+            height={40}
+          />
+        </div>
+      ) : null,
   },
   {
     header: "Title",
@@ -312,7 +73,13 @@ const columns = [
     header: "Created At",
     accessor: "createdAt",
     render: (row: FoodCategory) =>
-      new Date(row.createdAt).toLocaleDateString(),
+      row.createdAt
+        ? new Date(
+            (row.createdAt as any)?.toDate
+              ? (row.createdAt as any).toDate()
+              : row.createdAt,
+          ).toLocaleDateString()
+        : '-',
   },
 ];
 
@@ -320,6 +87,105 @@ const columns = [
 const page = () => {
 
   const [openAddModal, setOpenAddModal] = useState(false)
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create")
+  const [selectedCategory, setSelectedCategory] = useState<FoodCategory | null>(null)
+  const [categories, setCategories] = useState<FoodCategory[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/menu-categories')
+      const data = await res.json()
+      setCategories(data)
+    } catch (error) {
+      console.error('Failed to fetch categories', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const handleSave = async (data: any) => {
+    setLoading(true)
+
+    try {
+      let logoUrl: string | undefined =
+        modalMode === "edit" ? selectedCategory?.logo : undefined
+
+      if (data.imageFile) {
+        const file = await storage.createFile(
+          env.APPWRITE_STORAGE_BUCKET_ID,
+          ID.unique(),
+          data.imageFile,
+        )
+        const fileId = (file as any).$id || (file as any).id
+        logoUrl = `${env.APPWRITE_ENDPOINT}/v1/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${fileId}/view?project=${env.APPWRITE_PROJECT_ID}`
+      }
+
+      const payload = {
+        slug: modalMode === "edit" ? selectedCategory?.slug : data.slug,
+        title: data.title,
+        description: data.description,
+        sortOrder: Number(data.sortOrder) || 1,
+        isActive: data.isActive,
+        status: data.isActive ? 'active' : 'inactive',
+        logo: logoUrl,
+      }
+
+      if (modalMode === "create") {
+        const res = await fetch('/api/menu-categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        if (!res.ok) {
+          let errorMessage = 'Failed to create category'
+          try {
+            const errorBody = await res.json()
+            if (errorBody?.error) {
+              errorMessage = errorBody.error
+            }
+          } catch {
+            // ignore json parse error
+          }
+          throw new Error(errorMessage)
+        }
+      } else if (modalMode === "edit" && selectedCategory?.slug) {
+        const res = await fetch(
+          `/api/menu-categories?slug=${encodeURIComponent(
+            selectedCategory.slug,
+          )}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+        )
+
+        if (!res.ok) {
+          let errorMessage = 'Failed to update category'
+          try {
+            const errorBody = await res.json()
+            if (errorBody?.error) {
+              errorMessage = errorBody.error
+            }
+          } catch {
+            // ignore json parse error
+          }
+          throw new Error(errorMessage)
+        }
+      }
+
+      await fetchCategories()
+    } finally {
+      setLoading(false)
+    }
+  }
 
 
   return (
@@ -327,16 +193,38 @@ const page = () => {
       <PageBreadcrumb pageTitle="Basic Table" />
       <div className="space-y-6">
         <ComponentCard title="Menu Categories"  >
-          <div className='justify-end' >
-           <Button size='sm' onClick={()=>setOpenAddModal(true)} ><p>Create New</p></Button>
+          <div className='justify-end flex mb-4' >
+           <Button
+             size='sm'
+             onClick={() => {
+               setModalMode("create")
+               setSelectedCategory(null)
+               setOpenAddModal(true)
+             }}
+           >
+             <p>Create New</p>
+           </Button>
           </div>
-          <FoodCategoryTable/>
+          {loading && <p className="mb-2 text-sm text-gray-500">Loading...</p>}
+          <FoodCategoryTable
+            data={categories}
+            onEdit={(row) => {
+              setSelectedCategory(row)
+              setModalMode("edit")
+              setOpenAddModal(true)
+            }}
+          />
         </ComponentCard>
       </div>
       <AddMenuForm
         isOpen={openAddModal}
-        closeModal={()=>setOpenAddModal(false)}
-        handleSave={()=>{}}
+        closeModal={() => {
+          setOpenAddModal(false)
+          setSelectedCategory(null)
+        }}
+        handleSave={handleSave}
+        mode={modalMode}
+        initialData={selectedCategory || undefined}
        />
     </div>
   )
@@ -344,11 +232,36 @@ const page = () => {
 
 export default page
 
-export function FoodCategoryTable() {
+export function FoodCategoryTable({
+  data,
+  onEdit,
+}: {
+  data: FoodCategory[]
+  onEdit: (row: FoodCategory) => void
+}) {
+  const tableColumns = [
+    ...columns,
+    {
+      header: "Actions",
+      accessor: "actions",
+      render: (row: FoodCategory) => (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onEdit(row)}
+          >
+            <EditIcon className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <AppTable<FoodCategory>
-      data={foodCategoriesMaster}
-      columns={columns}
+      data={data}
+      columns={tableColumns}
       pageSize={5}   // change rows per page dynamically
     />
   );
