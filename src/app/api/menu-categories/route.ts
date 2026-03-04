@@ -4,6 +4,11 @@ import { env } from "../../../../config/env.config";
 
 const COLLECTION = env.FIREBASE_MENU_CATEGORIES_COLLECTION_ID;
 
+const removeUndefinedFields = (obj: Record<string, any>) =>
+  Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined)
+  );
+
 const toIsoDate = (value: any): string | null => {
   if (!value) return null;
 
@@ -131,10 +136,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await docRef.update({
+    const updatePayload = removeUndefinedFields({
       ...body,
       updatedAt: serverTimestamp(),
     });
+
+    await docRef.update(updatePayload);
 
     return NextResponse.json({ message: "Category updated" });
   } catch (error: any) {

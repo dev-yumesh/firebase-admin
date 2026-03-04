@@ -19,6 +19,7 @@ interface AddMenuFormProps {
     description?: string;
     sortOrder?: number | string;
     isActive?: boolean;
+    logo?: string;
   } | null;
   handleDelete?: () => Promise<void>;
 }
@@ -62,14 +63,28 @@ const AddMenuForm = ({
       return null;
     });
 
+    if (mode === "edit" && initialData) {
+      setFormData({
+        slug: initialData.slug ?? "",
+        title: initialData.title ?? "",
+        description: initialData.description ?? "",
+        sortOrder: initialData.sortOrder ?? 1,
+        isActive: initialData.isActive ?? true,
+        imageFile: null,
+      });
+      setPreviewUrl(initialData.logo ?? null);
+      return;
+    }
+
     setFormData({
-      slug: initialData?.slug ?? "",
-      title: initialData?.title ?? "",
-      description: initialData?.description ?? "",
-      sortOrder: initialData?.sortOrder ?? 1,
-      isActive: initialData?.isActive ?? true,
+      slug: "",
+      title: "",
+      description: "",
+      sortOrder: 1,
+      isActive: true,
       imageFile: null,
     });
+
   }, [isOpen, initialData, mode]);
 
   const handleChange = (key: string, value: any) => {
@@ -163,6 +178,7 @@ const AddMenuForm = ({
             <div className="col-span-2 mt-2">
               <Switch
                 label="Active"
+                checked={formData.isActive}
                 defaultChecked={formData.isActive}
                 onChange={(checked: boolean) =>
                   handleChange("isActive", checked)

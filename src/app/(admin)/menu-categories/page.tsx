@@ -117,13 +117,15 @@ const page = () => {
         modalMode === "edit" ? selectedCategory?.logo : undefined
 
       if (data.imageFile) {
-        const file = await storage.createFile(
-          env.APPWRITE_STORAGE_BUCKET_ID,
-          ID.unique(),
-          data.imageFile,
-        )
+        const file = await storage.createFile({
+         bucketId:  env.APPWRITE_STORAGE_BUCKET_ID,
+         fileId: ID.unique(),
+         file: data.imageFile,
+        })
+        
+        
         const fileId = (file as any).$id || (file as any).id
-        logoUrl = `${env.APPWRITE_ENDPOINT}/v1/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${fileId}/view?project=${env.APPWRITE_PROJECT_ID}`
+        logoUrl = `${env.APPWRITE_ENDPOINT}/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${fileId}/view?project=${env.APPWRITE_PROJECT_ID}`
       }
 
       const payload = {
