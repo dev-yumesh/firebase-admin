@@ -14,8 +14,10 @@ import {
   FileText as PageIcon,
   PieChart as PieChartIcon,
   Plug as PlugInIcon,
+  ShoppingBagIcon,
   Table as TableIcon,
   UserRound as UserCircleIcon,
+  UserIcon,
 } from "lucide-react";
 import SidebarWidget from "./SidebarWidget";
 
@@ -31,6 +33,18 @@ const navItems: NavItem[] = [
     icon: <GridIcon />,
     name: "Menu Categories",
     path: "/menu-categories",
+    // subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+  },
+  {
+    icon: <UserIcon />,
+    name: "Users",
+    path: "/users",
+    // subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+  },
+  {
+    icon: <ShoppingBagIcon />,
+    name: "Shops",
+    path: "/shops",
     // subItems: [{ name: "Ecommerce", path: "/", pro: false }],
   },
   {
