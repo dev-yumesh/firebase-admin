@@ -24,11 +24,13 @@ export interface FoodCategory {
   updatedAt?: any;
 }
 
+const PAGE_SIZE = 5;
+
 const columns = [
   {
     header: "Logo",
     accessor: "logo",
-    
+
     render: (row: FoodCategory) =>
       row.logo ? (
         <div className="w-10 h-10 rounded overflow-hidden">
@@ -83,7 +85,6 @@ const columns = [
   },
 ];
 
-
 const page = () => {
 
   const [openAddModal, setOpenAddModal] = useState(false)
@@ -91,13 +92,38 @@ const page = () => {
   const [selectedCategory, setSelectedCategory] = useState<FoodCategory | null>(null)
   const [categories, setCategories] = useState<FoodCategory[]>([])
   const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (pageNumber: number, searchTerm: string) => {
     try {
       setLoading(true)
-      const res = await fetch('/api/menu-categories')
+      const params = new URLSearchParams({
+        page: String(pageNumber),
+        limit: String(PAGE_SIZE),
+      })
+
+      if (searchTerm) {
+        params.set('search', searchTerm)
+      }
+
+      const res = await fetch(`/api/menu-categories?${params.toString()}`)
       const data = await res.json()
-      setCategories(data)
+
+      if (Array.isArray(data)) {
+        setCategories(data)
+        setTotalPages(Math.max(1, Math.ceil(data.length / PAGE_SIZE)))
+        return
+      }
+
+      setCategories(data.items || [])
+      setTotalPages(Math.max(1, data?.pagination?.totalPages || 1))
+
+      if (typeof data?.pagination?.page === 'number' && data.pagination.page !== pageNumber) {
+        setCurrentPage(data.pagination.page)
+      }
     } catch (error) {
       console.error('Failed to fetch categories', error)
     } finally {
@@ -106,8 +132,18 @@ const page = () => {
   }
 
   useEffect(() => {
-    fetchCategories()
-  }, [])
+    fetchCategories(currentPage, searchQuery)
+  }, [currentPage, searchQuery])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = searchInput.trim()
+      setCurrentPage(1)
+      setSearchQuery(trimmed)
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   const handleSave = async (data: any) => {
     setLoading(true)
@@ -122,8 +158,8 @@ const page = () => {
          fileId: ID.unique(),
          file: data.imageFile,
         })
-        
-        
+
+
         const fileId = (file as any).$id || (file as any).id
         logoUrl = `${env.APPWRITE_ENDPOINT}/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${fileId}/view?project=${env.APPWRITE_PROJECT_ID}`
       }
@@ -183,7 +219,7 @@ const page = () => {
         }
       }
 
-      await fetchCategories()
+      await fetchCategories(currentPage, searchQuery)
     } finally {
       setLoading(false)
     }
@@ -195,7 +231,13 @@ const page = () => {
       <PageBreadcrumb pageTitle="Basic Table" />
       <div className="space-y-6">
         <ComponentCard title="Menu Categories"  >
-          <div className='justify-end flex mb-4' >
+          <div className='mb-4 flex items-center justify-between gap-4'>
+           <input
+             value={searchInput}
+             onChange={(e) => setSearchInput(e.target.value)}
+             placeholder='Search by title, slug, or description'
+             className='w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500'
+           />
            <Button
              size='sm'
              onClick={() => {
@@ -210,6 +252,9 @@ const page = () => {
           {loading && <p className="mb-2 text-sm text-gray-500">Loading...</p>}
           <FoodCategoryTable
             data={categories}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(nextPage) => setCurrentPage(nextPage)}
             onEdit={(row) => {
               setSelectedCategory(row)
               setModalMode("edit")
@@ -236,9 +281,15 @@ export default page
 
 export function FoodCategoryTable({
   data,
+  currentPage,
+  totalPages,
+  onPageChange,
   onEdit,
 }: {
   data: FoodCategory[]
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
   onEdit: (row: FoodCategory) => void
 }) {
   const tableColumns = [
@@ -264,7 +315,10 @@ export function FoodCategoryTable({
     <AppTable<FoodCategory>
       data={data}
       columns={tableColumns}
-      pageSize={5}   // change rows per page dynamically
+      pageSize={PAGE_SIZE}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={onPageChange}
     />
   );
 }

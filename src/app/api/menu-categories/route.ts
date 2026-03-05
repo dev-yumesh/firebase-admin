@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Get single category (by ?slug=...) or list all
+// Get single category (by ?slug=...) or paginated list (?page=1&limit=10&search=...)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -94,12 +94,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(normalized);
     }
 
+    const pageParam = Number(searchParams.get("page") || "1");
+    const limitParam = Number(searchParams.get("limit") || "10");
+    const search = (searchParams.get("search") || "").trim().toLowerCase();
+
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+    const limit =
+      Number.isFinite(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 100)
+        : 10;
+
     const snapshot = await db
       .collection(COLLECTION)
       .orderBy("sortOrder", "asc")
       .get();
 
-    const categories = snapshot.docs.map((doc, index) => {
+    const allCategories = snapshot.docs.map((doc, index) => {
       const data: any = doc.data() || {};
 
       return {
@@ -111,7 +121,35 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json(categories);
+    const filteredCategories = search
+      ? allCategories.filter((category: any) => {
+          const title = String(category.title || "").toLowerCase();
+          const categorySlug = String(category.slug || "").toLowerCase();
+          const description = String(category.description || "").toLowerCase();
+
+          return (
+            title.includes(search) ||
+            categorySlug.includes(search) ||
+            description.includes(search)
+          );
+        })
+      : allCategories;
+
+    const total = filteredCategories.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(page, totalPages);
+    const start = (safePage - 1) * limit;
+    const items = filteredCategories.slice(start, start + limit);
+
+    return NextResponse.json({
+      items,
+      pagination: {
+        page: safePage,
+        limit,
+        total,
+        totalPages,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
