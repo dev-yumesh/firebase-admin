@@ -44,16 +44,20 @@ export async function POST(req: NextRequest) {
     }
 
     const slug = String(body.slug);
+    const existingBySlug = await db
+      .collection(COLLECTION)
+      .where("slug", "==", slug)
+      .limit(1)
+      .get();
 
-    const docRef = db.collection(COLLECTION).doc(slug);
-
-    const existing = await docRef.get();
-    if (existing.exists) {
+    if (!existingBySlug.empty) {
       return NextResponse.json(
         { error: "Category already exists" },
         { status: 400 }
       );
     }
+
+    const docRef = db.collection(COLLECTION).doc();
 
     await docRef.set({
       ...body,
@@ -62,22 +66,35 @@ export async function POST(req: NextRequest) {
       updatedAt: serverTimestamp(),
     });
 
-    return NextResponse.json({ message: "Category created" });
+    return NextResponse.json({ message: "Category created", id: docRef.id });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// Get single category (by ?slug=...) or paginated list (?page=1&limit=10&search=...)
+// Get single category (by ?id=... or ?slug=...) or paginated list (?page=1&limit=10&search=...)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
     const slug = searchParams.get("slug");
 
-    if (slug) {
-      const doc = await db.collection(COLLECTION).doc(slug).get();
+    if (id || slug) {
+      let doc: any = null;
 
-      if (!doc.exists) {
+      if (id) {
+        doc = await db.collection(COLLECTION).doc(String(id)).get();
+      } else {
+        const matchBySlug = await db
+          .collection(COLLECTION)
+          .where("slug", "==", String(slug))
+          .limit(1)
+          .get();
+
+        doc = matchBySlug.docs[0] || null;
+      }
+
+      if (!doc || !doc.exists) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
 
@@ -85,7 +102,6 @@ export async function GET(req: NextRequest) {
 
       const normalized = {
         id: doc.id,
-        slug: doc.id,
         ...data,
         createdAt: toIsoDate(data.createdAt),
         updatedAt: toIsoDate(data.updatedAt),
@@ -114,7 +130,6 @@ export async function GET(req: NextRequest) {
 
       return {
         id: doc.id ?? index + 1,
-        slug: doc.id,
         ...data,
         createdAt: toIsoDate(data.createdAt),
         updatedAt: toIsoDate(data.updatedAt),
@@ -155,19 +170,39 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Update category (?slug=...)
+// Update category (?id=... or ?slug=...)
 export async function PUT(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const idFromQuery = searchParams.get("id");
     const slugFromQuery = searchParams.get("slug");
     const body: any = await req.json();
+    const id = idFromQuery || body.id;
     const slug = slugFromQuery || body.slug;
 
-    if (!slug) {
-      return NextResponse.json({ error: "Slug required" }, { status: 400 });
+    if (!id && !slug) {
+      return NextResponse.json(
+        { error: "id or slug required" },
+        { status: 400 }
+      );
     }
 
-    const docRef = db.collection(COLLECTION).doc(String(slug));
+    let docRef;
+    if (id) {
+      docRef = db.collection(COLLECTION).doc(String(id));
+    } else {
+      const matchBySlug = await db
+        .collection(COLLECTION)
+        .where("slug", "==", String(slug))
+        .limit(1)
+        .get();
+
+      if (matchBySlug.empty) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      docRef = matchBySlug.docs[0].ref;
+    }
 
     const existing = await docRef.get();
     if (!existing.exists) {
@@ -176,6 +211,8 @@ export async function PUT(req: NextRequest) {
 
     const updatePayload = removeUndefinedFields({
       ...body,
+      id: undefined,
+      createdAt: undefined,
       updatedAt: serverTimestamp(),
     });
 
@@ -187,17 +224,36 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// Delete category (?slug=...)
+// Delete category (?id=... or ?slug=...)
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
     const slug = searchParams.get("slug");
 
-    if (!slug) {
-      return NextResponse.json({ error: "Slug required" }, { status: 400 });
+    if (!id && !slug) {
+      return NextResponse.json(
+        { error: "id or slug required" },
+        { status: 400 }
+      );
     }
 
-    await db.collection(COLLECTION).doc(String(slug)).delete();
+    if (id) {
+      await db.collection(COLLECTION).doc(String(id)).delete();
+      return NextResponse.json({ message: "Category deleted" });
+    }
+
+    const matchBySlug = await db
+      .collection(COLLECTION)
+      .where("slug", "==", String(slug))
+      .limit(1)
+      .get();
+
+    if (matchBySlug.empty) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await matchBySlug.docs[0].ref.delete();
     return NextResponse.json({ message: "Category deleted" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
