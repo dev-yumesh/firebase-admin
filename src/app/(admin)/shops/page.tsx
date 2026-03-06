@@ -163,14 +163,16 @@ const page = () => {
             />
           </div>
           {loading && <p className="mb-2 text-sm text-gray-500">Loading...</p>}
-          <AppTable<AdminShop>
-            data={shops}
-            columns={columns}
-            pageSize={PAGE_SIZE}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(nextPage) => setCurrentPage(nextPage)}
-          />
+          <div className="w-full max-w-full overflow-x-hidden">
+            <AppTable<AdminShop>
+              data={shops}
+              columns={columns}
+              pageSize={PAGE_SIZE}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(nextPage) => setCurrentPage(nextPage)}
+            />
+          </div>
         </ComponentCard>
       </div>
     </div>

@@ -250,17 +250,19 @@ const page = () => {
            </Button>
           </div>
           {loading && <p className="mb-2 text-sm text-gray-500">Loading...</p>}
-          <FoodCategoryTable
-            data={categories}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(nextPage) => setCurrentPage(nextPage)}
-            onEdit={(row) => {
-              setSelectedCategory(row)
-              setModalMode("edit")
-              setOpenAddModal(true)
-            }}
-          />
+          <div className="w-full max-w-full overflow-x-auto">
+            <FoodCategoryTable
+              data={categories}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(nextPage) => setCurrentPage(nextPage)}
+              onEdit={(row) => {
+                setSelectedCategory(row)
+                setModalMode("edit")
+                setOpenAddModal(true)
+              }}
+            />
+          </div>
         </ComponentCard>
       </div>
       <AddMenuForm
