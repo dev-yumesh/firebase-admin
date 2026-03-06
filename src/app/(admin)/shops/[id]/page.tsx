@@ -3,6 +3,7 @@
 import ComponentCard from "@/components/common/ComponentCard"
 import PageBreadcrumb from "@/components/common/PageBreadCrumb"
 import Badge from "@/components/ui/badge/Badge"
+import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import React, { useEffect, useState } from "react"
@@ -13,6 +14,8 @@ interface ShopDetails {
   shopEmail?: string;
   shopType?: string;
   ownerId?: string;
+  shopQR?: string;
+  logoURL?: string;
   status?: string;
   isActive?: boolean;
   hasSeating?: boolean;
@@ -96,6 +99,14 @@ const Page = () => {
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">{shop.ownerId || "-"}</p>
               </div>
               <div>
+                <p className="text-xs text-gray-500">Shop Logo URL</p>
+                <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">{shop.logoURL || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Shop QR URL</p>
+                <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">{shop.shopQR || "-"}</p>
+              </div>
+              <div>
                 <p className="text-xs text-gray-500">Status</p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">{shop.status || "-"}</p>
               </div>
@@ -106,6 +117,55 @@ const Page = () => {
               <div>
                 <p className="text-xs text-gray-500">Updated At</p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">{formatDate(shop.updatedAt)}</p>
+              </div>
+            </div>
+          </ComponentCard>
+
+          <ComponentCard title="Shop Assets">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <p className="mb-2 text-xs text-gray-500">Shop Logo</p>
+                {shop.logoURL ? (
+                  <a
+                    href={shop.logoURL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-fit"
+                  >
+                    <Image
+                      src={shop.logoURL}
+                      alt={shop.shopName || "Shop logo"}
+                      width={120}
+                      height={120}
+                      unoptimized
+                      className="rounded-lg border border-gray-200 object-cover"
+                    />
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500">No logo available</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-gray-500">Shop QR</p>
+                {shop.shopQR ? (
+                  <a
+                    href={shop.shopQR}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-fit"
+                  >
+                    <Image
+                      src={shop.shopQR}
+                      alt={`${shop.shopName || "Shop"} QR`}
+                      width={140}
+                      height={140}
+                      unoptimized
+                      className="rounded-lg border border-gray-200 object-cover"
+                    />
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500">No QR available</p>
+                )}
               </div>
             </div>
           </ComponentCard>
