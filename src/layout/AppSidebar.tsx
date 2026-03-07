@@ -15,6 +15,7 @@ import {
   PieChart as PieChartIcon,
   Plug as PlugInIcon,
   ShoppingBagIcon,
+  Settings as SettingsIcon,
   Table as TableIcon,
   UserRound as UserCircleIcon,
   UserIcon,
@@ -46,6 +47,11 @@ const navItems: NavItem[] = [
     name: "Shops",
     path: "/shops",
     // subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+  },
+  {
+    icon: <SettingsIcon />,
+    name: "App Settings",
+    path: "/app-settings",
   },
   {
     icon: <GridIcon />,

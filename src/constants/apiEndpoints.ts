@@ -14,5 +14,9 @@ export const API_ENDPOINTS = {
     byId: (id: string | number) =>
       `/api/menu-categories?id=${encodeURIComponent(String(id))}`,
   },
+  appSettings: {
+    list: "/api/app-settings",
+    detail: (id: string | number) =>
+      `/api/app-settings?id=${encodeURIComponent(String(id))}`,
+  },
 } as const
-
