@@ -10,19 +10,15 @@ import React, { useEffect, useState } from 'react'
 import { Pencil as EditIcon } from 'lucide-react'
 import { storage, ID } from '@/lib/appwriteServices'
 import { env } from '../../../../config/env.config'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import {
+  MenuCategory,
+  createMenuCategoryThunk,
+  fetchMenuCategoriesThunk,
+  updateMenuCategoryThunk,
+} from '@/store/features/menuCategories/menuCategoriesSlice'
 
-export interface FoodCategory {
-  id: string | number;
-  slug: string;
-  title: string;
-  description: string;
-  logo?: string;
-  status: string;
-  isActive: boolean;
-  sortOrder: number;
-  createdAt?: any;
-  updatedAt?: any;
-}
+export type FoodCategory = MenuCategory
 
 const PAGE_SIZE = 5;
 
@@ -85,55 +81,28 @@ const columns = [
   },
 ];
 
-const page = () => {
+const Page = () => {
+  const dispatch = useAppDispatch()
+  const { items: categories, loading, error, pagination } = useAppSelector(
+    (state) => state.menuCategories,
+  )
 
   const [openAddModal, setOpenAddModal] = useState(false)
   const [modalMode, setModalMode] = useState<"create" | "edit">("create")
   const [selectedCategory, setSelectedCategory] = useState<FoodCategory | null>(null)
-  const [categories, setCategories] = useState<FoodCategory[]>([])
-  const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const fetchCategories = async (pageNumber: number, searchTerm: string) => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: String(pageNumber),
-        limit: String(PAGE_SIZE),
-      })
-
-      if (searchTerm) {
-        params.set('search', searchTerm)
-      }
-
-      const res = await fetch(`/api/menu-categories?${params.toString()}`)
-      const data = await res.json()
-
-      if (Array.isArray(data)) {
-        setCategories(data)
-        setTotalPages(Math.max(1, Math.ceil(data.length / PAGE_SIZE)))
-        return
-      }
-
-      setCategories(data.items || [])
-      setTotalPages(Math.max(1, data?.pagination?.totalPages || 1))
-
-      if (typeof data?.pagination?.page === 'number' && data.pagination.page !== pageNumber) {
-        setCurrentPage(data.pagination.page)
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchCategories(currentPage, searchQuery)
-  }, [currentPage, searchQuery])
+    dispatch(
+      fetchMenuCategoriesThunk({
+        page: currentPage,
+        limit: PAGE_SIZE,
+        search: searchQuery,
+      }),
+    )
+  }, [currentPage, searchQuery, dispatch])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -146,8 +115,6 @@ const page = () => {
   }, [searchInput])
 
   const handleSave = async (data: any) => {
-    setLoading(true)
-
     try {
       let logoUrl: string | undefined =
         modalMode === "edit" ? selectedCategory?.logo : undefined
@@ -175,53 +142,25 @@ const page = () => {
       }
 
       if (modalMode === "create") {
-        const res = await fetch('/api/menu-categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-
-        if (!res.ok) {
-          let errorMessage = 'Failed to create category'
-          try {
-            const errorBody = await res.json()
-            if (errorBody?.error) {
-              errorMessage = errorBody.error
-            }
-          } catch {
-            // ignore json parse error
-          }
-          throw new Error(errorMessage)
-        }
+        await dispatch(createMenuCategoryThunk(payload)).unwrap()
       } else if (modalMode === "edit" && selectedCategory?.slug) {
-        const res = await fetch(
-          `/api/menu-categories?slug=${encodeURIComponent(
-            selectedCategory.slug,
-          )}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-        )
-
-        if (!res.ok) {
-          let errorMessage = 'Failed to update category'
-          try {
-            const errorBody = await res.json()
-            if (errorBody?.error) {
-              errorMessage = errorBody.error
-            }
-          } catch {
-            // ignore json parse error
-          }
-          throw new Error(errorMessage)
-        }
+        await dispatch(
+          updateMenuCategoryThunk({
+            slug: selectedCategory.slug,
+            payload,
+          }),
+        ).unwrap()
       }
 
-      await fetchCategories(currentPage, searchQuery)
-    } finally {
-      setLoading(false)
+      await dispatch(
+        fetchMenuCategoriesThunk({
+          page: currentPage,
+          limit: PAGE_SIZE,
+          search: searchQuery,
+        }),
+      )
+    } catch (saveError) {
+      console.error('Failed to save category', saveError)
     }
   }
 
@@ -250,11 +189,12 @@ const page = () => {
            </Button>
           </div>
           {loading && <p className="mb-2 text-sm text-gray-500">Loading...</p>}
+          {error && <p className="mb-2 text-sm text-error-500">{error}</p>}
           <div className="w-full max-w-full overflow-x-auto">
             <FoodCategoryTable
               data={categories}
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={pagination.totalPages}
               onPageChange={(nextPage) => setCurrentPage(nextPage)}
               onEdit={(row) => {
                 setSelectedCategory(row)
@@ -279,7 +219,7 @@ const page = () => {
   )
 }
 
-export default page
+export default Page
 
 export function FoodCategoryTable({
   data,

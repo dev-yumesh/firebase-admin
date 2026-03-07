@@ -6,25 +6,12 @@ import Badge from "@/components/ui/badge/Badge"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import React, { useEffect, useState } from "react"
-
-interface ShopDetails {
-  id: string | number;
-  shopName?: string;
-  shopEmail?: string;
-  shopType?: string;
-  ownerId?: string;
-  shopQR?: string;
-  logoURL?: string;
-  status?: string;
-  isActive?: boolean;
-  hasSeating?: boolean;
-  isEmailVerified?: boolean;
-  isOwnerVerified?: boolean;
-  isVerified?: boolean;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
+import React, { useEffect } from "react"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import {
+  clearSelectedShop,
+  fetchShopByIdThunk,
+} from "@/store/features/shops/shopsSlice"
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-"
@@ -32,34 +19,23 @@ const formatDate = (value?: string | null) => {
 }
 
 const Page = () => {
+  const dispatch = useAppDispatch()
+  const { selected: shop, detailLoading: loading, detailError: error } = useAppSelector(
+    (state) => state.shops,
+  )
+
   const params = useParams<{ id: string }>()
   const id = decodeURIComponent(params?.id || "")
-  const [shop, setShop] = useState<ShopDetails | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
   useEffect(() => {
-    const fetchShop = async () => {
-      if (!id) return
-
-      try {
-        setLoading(true)
-        setError("")
-        const res = await fetch(`/api/shops?id=${encodeURIComponent(id)}`)
-        if (!res.ok) {
-          throw new Error("Unable to fetch shop details")
-        }
-        const data = await res.json()
-        setShop(data)
-      } catch (err: any) {
-        setError(err?.message || "Unable to fetch shop details")
-      } finally {
-        setLoading(false)
-      }
+    if (id) {
+      dispatch(fetchShopByIdThunk(id))
     }
 
-    fetchShop()
-  }, [id])
+    return () => {
+      dispatch(clearSelectedShop())
+    }
+  }, [id, dispatch])
 
   return (
     <div>

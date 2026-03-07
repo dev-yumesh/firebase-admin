@@ -5,21 +5,12 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb"
 import Badge from "@/components/ui/badge/Badge"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import React, { useEffect, useState } from "react"
-
-interface UserDetails {
-  id: string | number;
-  name?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
-  status?: string;
-  isActive?: boolean;
-  isEmailVerified?: boolean;
-  isPhoneVerified?: boolean;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
+import React, { useEffect } from "react"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import {
+  clearSelectedUser,
+  fetchUserByIdThunk,
+} from "@/store/features/users/usersSlice"
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-"
@@ -27,34 +18,23 @@ const formatDate = (value?: string | null) => {
 }
 
 const Page = () => {
+  const dispatch = useAppDispatch()
+  const { selected: user, detailLoading: loading, detailError: error } = useAppSelector(
+    (state) => state.users,
+  )
+
   const params = useParams<{ id: string }>()
   const id = decodeURIComponent(params?.id || "")
-  const [user, setUser] = useState<UserDetails | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!id) return
-
-      try {
-        setLoading(true)
-        setError("")
-        const res = await fetch(`/api/users?id=${encodeURIComponent(id)}`)
-        if (!res.ok) {
-          throw new Error("Unable to fetch user details")
-        }
-        const data = await res.json()
-        setUser(data)
-      } catch (err: any) {
-        setError(err?.message || "Unable to fetch user details")
-      } finally {
-        setLoading(false)
-      }
+    if (id) {
+      dispatch(fetchUserByIdThunk(id))
     }
 
-    fetchUser()
-  }, [id])
+    return () => {
+      dispatch(clearSelectedUser())
+    }
+  }, [id, dispatch])
 
   return (
     <div>

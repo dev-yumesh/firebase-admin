@@ -7,21 +7,11 @@ import { Dropdown } from "@/components/ui/dropdown/Dropdown"
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem"
 import React, { useMemo, useState, useEffect } from "react"
 import { Copy, Eye, Mail, MoreVertical } from "lucide-react"
-
-export interface AdminShop {
-  id: string | number;
-  shopName?: string;
-  shopEmail?: string;
-  shopType?: string;
-  ownerId?: string;
-  hasSeating?: boolean;
-  isEmailVerified?: boolean;
-  isOwnerVerified?: boolean;
-  isVerified?: boolean;
-  isActive?: boolean;
-  status?: string;
-  createdAt?: string | null;
-}
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import {
+  AdminShop,
+  fetchShopsThunk,
+} from "@/store/features/shops/shopsSlice"
 
 const PAGE_SIZE = 10
 
@@ -105,44 +95,25 @@ const baseColumns = [
 ]
 
 const Page = () => {
-  const [shops, setShops] = useState<AdminShop[]>([])
-  const [loading, setLoading] = useState(false)
+  const dispatch = useAppDispatch()
+  const { items: shops, loading, error, pagination } = useAppSelector(
+    (state) => state.shops,
+  )
+
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [openActionMenuId, setOpenActionMenuId] = useState<string | number | null>(null)
 
-  const fetchShops = async (pageNumber: number, searchTerm: string) => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: String(pageNumber),
-        limit: String(PAGE_SIZE),
-      })
-
-      if (searchTerm) {
-        params.set("search", searchTerm)
-      }
-
-      const res = await fetch(`/api/shops?${params.toString()}`)
-      const data = await res.json()
-
-      setShops(data.items || [])
-      setTotalPages(Math.max(1, data?.pagination?.totalPages || 1))
-      if (typeof data?.pagination?.page === "number" && data.pagination.page !== pageNumber) {
-        setCurrentPage(data.pagination.page)
-      }
-    } catch (error) {
-      console.error("Failed to fetch shops", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchShops(currentPage, searchQuery)
-  }, [currentPage, searchQuery])
+    dispatch(
+      fetchShopsThunk({
+        page: currentPage,
+        limit: PAGE_SIZE,
+        search: searchQuery,
+      }),
+    )
+  }, [currentPage, searchQuery, dispatch])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -156,8 +127,8 @@ const Page = () => {
   const handleCopyId = async (id: string | number) => {
     try {
       await navigator.clipboard.writeText(String(id))
-    } catch (error) {
-      console.error("Failed to copy shop id", error)
+    } catch (copyError) {
+      console.error("Failed to copy shop id", copyError)
     } finally {
       setOpenActionMenuId(null)
     }
@@ -233,13 +204,14 @@ const Page = () => {
             />
           </div>
           {loading && <p className="mb-2 text-sm text-gray-500">Loading...</p>}
+          {error && <p className="mb-2 text-sm text-error-500">{error}</p>}
           <div className="w-full max-w-full overflow-x-hidden">
             <AppTable<AdminShop>
               data={shops}
               columns={tableColumns}
               pageSize={PAGE_SIZE}
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={pagination.totalPages}
               onPageChange={(nextPage) => setCurrentPage(nextPage)}
             />
           </div>
