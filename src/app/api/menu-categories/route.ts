@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, serverTimestamp } from "@/lib/firebaseAdmin";
-import { env } from "../../../../config/env.config";
+import { env } from "@/config/env.config";
 
 const COLLECTION = env.FIREBASE_MENU_CATEGORIES_COLLECTION_ID;
 

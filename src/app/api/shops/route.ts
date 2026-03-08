@@ -1,31 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebaseAdmin";
-import { env } from "../../../../config/env.config";
+import { toIsoDate } from "@/utils/validators";
+import { env } from "@/config/env.config";
 
 const COLLECTION = env.FIREBASE_SHOP_COLLECTION_ID;
-
-const toIsoDate = (value: any): string | null => {
-  if (!value) return null;
-
-  if (typeof value.toDate === "function") {
-    return value.toDate().toISOString();
-  }
-
-  if (typeof value._seconds === "number") {
-    const ms = value._seconds * 1000 + (value._nanoseconds || 0) / 1_000_000;
-    return new Date(ms).toISOString();
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return null;
-};
 
 export async function GET(req: NextRequest) {
   try {

@@ -9,7 +9,7 @@ import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
 import { Pencil as EditIcon } from 'lucide-react'
 import { storage, ID } from '@/lib/appwriteServices'
-import { env } from '../../../../config/env.config'
+import { env } from '@/config/env.config'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import {
   MenuCategory,

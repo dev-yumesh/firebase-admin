@@ -1,5 +1,5 @@
 import { Account, Client, Databases, ID, Storage, } from "appwrite";
-import { env } from "../../config/env.config";
+import { env } from "@/config/env.config";
 
 const client = new Client()
   .setEndpoint(env.APPWRITE_ENDPOINT)

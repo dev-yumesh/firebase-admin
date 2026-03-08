@@ -1,5 +1,5 @@
 import admin from "firebase-admin";
-import { env } from "../../config/env.config";
+import { env } from "@/config/env.config";
 
 if (!admin.apps.length) {
   admin.initializeApp({

@@ -1,167 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, serverTimestamp } from "@/lib/firebaseAdmin";
-import { env } from "../../../../config/env.config";
+import {
+  buildAppSettingsPayload,
+  normalizeString,
+  toIsoDate,
+} from "@/utils/validators";
+import { env } from "@/config/env.config";
 
 const COLLECTION =
   env.FIREBASE_APP_SETTINGS_COLLECTION_ID;
-
-const ALLOWED_PLATFORM = new Set(["ALL", "ANDROID", "IOS", "WEB"]);
-const ALLOWED_STATUS = new Set(["ACTIVE", "INACTIVE"]);
-const SEMVER_REGEX = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
-
-const removeUndefinedFields = (obj: Record<string, any>) =>
-  Object.fromEntries(
-    Object.entries(obj).filter(([, value]) => value !== undefined)
-  );
-
-const normalizeString = (value: any) =>
-  typeof value === "string" ? value.trim() : "";
-
-const toIsoDate = (value: any): string | null => {
-  if (!value) return null;
-
-  if (typeof value.toDate === "function") {
-    return value.toDate().toISOString();
-  }
-
-  if (typeof value._seconds === "number") {
-    const ms = value._seconds * 1000 + (value._nanoseconds || 0) / 1_000_000;
-    return new Date(ms).toISOString();
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return null;
-};
-
-const validateSemver = (value: string) => SEMVER_REGEX.test(value);
-
-const buildAppSettingsPayload = (body: any, isCreate: boolean) => {
-  const errors: string[] = [];
-
-  const key = normalizeString(body.key).toUpperCase();
-  const platform = normalizeString(
-    body.platform || (isCreate ? "ALL" : "")
-  ).toUpperCase();
-  const version = normalizeString(body.version);
-  const minSupportedVersion = normalizeString(body.minSupportedVersion);
-  const status = normalizeString(
-    body.status || (isCreate ? "ACTIVE" : "")
-  ).toUpperCase();
-
-  const forceUpdateRaw = body.forceUpdate;
-  const maintenanceModeRaw = body.maintenanceMode;
-  const latestBuildNumberRaw = body.latestBuildNumber;
-
-  if (isCreate || body.key !== undefined) {
-    if (!key) {
-      errors.push("key is required");
-    }
-  }
-
-  if (isCreate || body.version !== undefined) {
-    if (!version) {
-      errors.push("version is required");
-    } else if (!validateSemver(version)) {
-      errors.push("version must be a valid semver like 1.0.0");
-    }
-  }
-
-  if (minSupportedVersion && !validateSemver(minSupportedVersion)) {
-    errors.push(
-      "minSupportedVersion must be a valid semver like 1.0.0"
-    );
-  }
-
-  if (isCreate || body.forceUpdate !== undefined) {
-    if (typeof forceUpdateRaw !== "boolean") {
-      errors.push("forceUpdate must be boolean");
-    }
-  }
-
-  if (
-    maintenanceModeRaw !== undefined &&
-    typeof maintenanceModeRaw !== "boolean"
-  ) {
-    errors.push("maintenanceMode must be boolean");
-  }
-
-  if (platform && !ALLOWED_PLATFORM.has(platform)) {
-    errors.push("platform must be one of ALL, ANDROID, IOS, WEB");
-  }
-
-  if (status && !ALLOWED_STATUS.has(status)) {
-    errors.push("status must be one of ACTIVE, INACTIVE");
-  }
-
-  if (latestBuildNumberRaw !== undefined) {
-    const numericBuild = Number(latestBuildNumberRaw);
-    if (!Number.isFinite(numericBuild) || numericBuild < 0) {
-      errors.push("latestBuildNumber must be a positive number");
-    }
-  }
-
-  const releaseDate = normalizeString(body.releaseDate);
-  if (releaseDate && Number.isNaN(new Date(releaseDate).getTime())) {
-    errors.push("releaseDate must be a valid date string");
-  }
-
-  if (errors.length) {
-    return { errors, payload: null };
-  }
-
-  const payload = removeUndefinedFields({
-    key: body.key !== undefined || isCreate ? key : undefined,
-    platform: body.platform !== undefined || isCreate ? platform : undefined,
-    version: body.version !== undefined || isCreate ? version : undefined,
-    minSupportedVersion:
-      body.minSupportedVersion !== undefined ? minSupportedVersion : undefined,
-    forceUpdate: body.forceUpdate,
-    maintenanceMode: body.maintenanceMode,
-    latestBuildNumber:
-      body.latestBuildNumber !== undefined
-        ? Number(body.latestBuildNumber)
-        : undefined,
-    title: body.title !== undefined ? normalizeString(body.title) : undefined,
-    updateMessage:
-      body.updateMessage !== undefined
-        ? normalizeString(body.updateMessage)
-        : undefined,
-    downloadUrl:
-      body.downloadUrl !== undefined ? normalizeString(body.downloadUrl) : undefined,
-    status: body.status !== undefined || isCreate ? status : undefined,
-    releaseDate: body.releaseDate !== undefined ? releaseDate : undefined,
-  });
-
-  if (isCreate) {
-    return {
-      errors: [],
-      payload: {
-        ...payload,
-        forceUpdate: payload.forceUpdate ?? false,
-        maintenanceMode: payload.maintenanceMode ?? false,
-        latestBuildNumber: payload.latestBuildNumber ?? 0,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-    };
-  }
-
-  return {
-    errors: [],
-    payload: removeUndefinedFields({
-      ...payload,
-      createdAt: undefined,
-      updatedAt: serverTimestamp(),
-    }),
-  };
-};
 
 const normalizeDoc = (doc: any) => {
   const data: any = doc.data() || {};
@@ -176,7 +23,7 @@ const normalizeDoc = (doc: any) => {
 export async function POST(req: NextRequest) {
   try {
     const body: any = await req.json();
-    const { errors, payload } = buildAppSettingsPayload(body, true);
+    const { errors, payload } = await buildAppSettingsPayload(body, true);
 
     if (errors.length) {
       return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
@@ -200,7 +47,11 @@ export async function POST(req: NextRequest) {
     }
 
     const docRef = db.collection(COLLECTION).doc();
-    await docRef.set(payload || {});
+    await docRef.set({
+      ...(payload || {}),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
 
     return NextResponse.json(
       { message: "App setting created", id: docRef.id },
@@ -320,7 +171,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const { errors, payload } = buildAppSettingsPayload(body, false);
+    const { errors, payload } = await buildAppSettingsPayload(body, false);
     if (errors.length) {
       return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
     }
@@ -356,7 +207,10 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    await docRef.update(payload);
+    await docRef.update({
+      ...payload,
+      updatedAt: serverTimestamp(),
+    });
     return NextResponse.json({ message: "App setting updated" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
