@@ -4,6 +4,7 @@ import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
+import { usePathname } from "next/navigation";
 import React from "react";
 
 export default function AdminLayout({
@@ -12,6 +13,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const pathname = usePathname();
+  const isLandingPage = pathname === "/";
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
@@ -22,17 +25,25 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen overflow-x-hidden xl:flex">
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
-      {/* Main Content Area */}
+      {!isLandingPage && (
+        <>
+          <AppSidebar />
+          <Backdrop />
+        </>
+      )}
       <div
-        className={`min-w-0 flex-1 overflow-x-hidden transition-all duration-300 ease-in-out ${mainContentMargin}`}
+        className={`min-w-0 flex-1 overflow-x-hidden transition-all duration-300 ease-in-out ${
+          isLandingPage ? "ml-0" : mainContentMargin
+        }`}
       >
-        {/* Header */}
-        <AppHeader />
-        {/* Page Content */}
-        <div className="mx-auto min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6">
+        {!isLandingPage && <AppHeader />}
+        <div
+          className={
+            isLandingPage
+              ? "min-h-screen"
+              : "mx-auto min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6"
+          }
+        >
           {children}
         </div>
       </div>
