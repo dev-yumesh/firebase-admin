@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, serverTimestamp } from "@/lib/firebaseAdmin";
+import { env } from "../../../../config/env.config";
 
 const COLLECTION =
-  process.env.NEXT_PUBLIC_APP_SETTINGS_COLLECTION_NAME || "app_settings";
+  env.FIREBASE_APP_SETTINGS_COLLECTION_ID;
 
 const ALLOWED_PLATFORM = new Set(["ALL", "ANDROID", "IOS", "WEB"]);
 const ALLOWED_STATUS = new Set(["ACTIVE", "INACTIVE"]);
