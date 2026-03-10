@@ -6,6 +6,7 @@ import { env } from "@/config/env.config";
 const COLLECTION = env.FIREBASE_USER_COLLECTION_ID;
 
 export async function POST(req: NextRequest) {
+  
   try {
     const body: any = await req.json();
     const { errors, payload } = await buildUserPayload(body, true);
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
+    console.log('user create error ', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
