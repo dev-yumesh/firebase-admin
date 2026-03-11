@@ -1,6 +1,8 @@
 import * as yup from "yup";
 
-const USER_ROLES = ["CUSTOMER", "OWNER", "ADMIN"] as const;
+const USER_ROLES = ["CUSTOMER", "OWNER", "MANAGER"] as const;
+const SHOP_TYPES = ["STALL", "RESTORENT"] as const;
+
 const ENTITY_STATUS = ["ACTIVE", "INACTIVE"] as const;
 const APP_PLATFORMS = ["ALL", "ANDROID", "IOS", "WEB"] as const;
 const SEMVER_REGEX = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -90,8 +92,8 @@ const userAddressSchema = yup
   .typeError(typeErrorMessages.userAddress)
   .notRequired();
 
-const userCreateSchema = yup.object({
-  id: yup.string().transform((_, originalValue) => trimString(originalValue)).notRequired(),
+export const userCreateSchema = yup.object({
+  // id: yup.string().transform((_, originalValue) => trimString(originalValue)).notRequired(),
   name: yup
     .string()
     .transform((_, originalValue) => trimString(originalValue))
@@ -116,28 +118,63 @@ const userCreateSchema = yup.object({
     .transform((_, originalValue) => trimUpperString(originalValue))
     .default("CUSTOMER")
     .oneOf(USER_ROLES, "role must be one of CUSTOMER, OWNER, ADMIN"),
-  language: yup
-    .string()
-    .transform((_, originalValue) => trimString(originalValue))
-    .default("en"),
-  status: yup
-    .string()
-    .transform((_, originalValue) => trimUpperString(originalValue))
-    .default("ACTIVE")
-    .oneOf(ENTITY_STATUS, "status must be one of ACTIVE, INACTIVE"),
-  photo: yup.mixed().notRequired(),
-  photoURL: yup.mixed().notRequired(),
-  address: yup.mixed().notRequired(),
-  userAddress: userAddressSchema,
-  isEmailVerified: yup.boolean().default(false),
-  isPhoneVerified: yup.boolean().default(false),
-  isActive: yup.boolean().default(true),
-  coins: yup.number().notRequired().default(0),
-  availableCoins: yup.number().notRequired().default(0),
-  coinbalance: yup.number().notRequired().default(0),
+  // language: yup
+  //   .string()
+  //   .transform((_, originalValue) => trimString(originalValue))
+  //   .default("en"),
+  // status: yup
+  //   .string()
+  //   .transform((_, originalValue) => trimUpperString(originalValue))
+  //   .default("ACTIVE")
+  //   .oneOf(ENTITY_STATUS, "status must be one of ACTIVE, INACTIVE"),
+  // photo: yup.mixed().notRequired(),
+  // photoURL: yup.mixed().notRequired(),
+  // address: yup.mixed().notRequired(),
+  // userAddress: userAddressSchema,
+  // isEmailVerified: yup.boolean().default(false),
+  // isPhoneVerified: yup.boolean().default(false),
+  // isActive: yup.boolean().default(true),
+  // coins: yup.number().notRequired().default(0),
+  // availableCoins: yup.number().notRequired().default(0),
+  // walletBalance: yup.number().notRequired().default(0),
 });
 
-const userUpdateSchema = yup.object({
+export const shopCreateSchema = yup.object({
+  shopName: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .required("shopName is required"),
+
+  shopType: yup
+    .string()
+    .transform((_, originalValue) => trimUpperString(originalValue))
+    .required("shopType is required")
+    .oneOf(SHOP_TYPES, "shopType must be one of RESTAURANT, SHOP, CAFE"),
+
+  hasSeating: yup
+    .boolean()
+    .required("hasSeating is required"),
+
+  totalFloors: yup
+    .number()
+    .typeError("totalFloors must be a number")
+    .min(0, "totalFloors cannot be negative")
+    .required("totalFloors is required"),
+
+  logoURL: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired()
+    .url("logoURL must be a valid URL"),
+
+  bannerImageURL: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired()
+    .url("bannerImageURL must be a valid URL"),
+});
+
+export const userUpdateSchema = yup.object({
   name: yup
     .string()
     .transform((_, originalValue) => trimString(originalValue))
@@ -195,10 +232,10 @@ const userUpdateSchema = yup.object({
   isActive: yup.boolean().notRequired(),
   coins: yup.number().notRequired(),
   availableCoins: yup.number().notRequired(),
-  coinbalance: yup.number().notRequired(),
+  walletBalance: yup.number().notRequired(),
 });
 
-const appSettingsCreateSchema = yup.object({
+export const appSettingsCreateSchema = yup.object({
   key: yup
     .string()
     .transform((_, originalValue) => trimUpperString(originalValue))
@@ -268,7 +305,7 @@ const appSettingsCreateSchema = yup.object({
     ),
 });
 
-const appSettingsUpdateSchema = yup.object({
+export const appSettingsUpdateSchema = yup.object({
   key: yup
     .string()
     .transform((_, originalValue) => trimUpperString(originalValue))
@@ -366,7 +403,7 @@ export const buildUserPayload = async (body: unknown, isCreate: boolean) => {
           status: validated.status,
           coins: validated.coins,
           availableCoins: validated.availableCoins,
-          coinbalance: validated.coinbalance,
+          walletBalance: validated.walletBalance,
         })
       : removeUndefinedFields({
           name: validated.name,
@@ -384,7 +421,7 @@ export const buildUserPayload = async (body: unknown, isCreate: boolean) => {
           status: validated.status,
           coins: validated.coins,
           availableCoins: validated.availableCoins,
-          coinbalance: validated.coinbalance,
+          walletBalance: validated.walletBalance,
         });
 
     return { errors: [] as string[], payload };

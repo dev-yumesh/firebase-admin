@@ -1,52 +1,151 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, serverTimestamp } from "@/lib/firebaseAdmin";
-import { buildUserPayload, normalizeString, toIsoDate } from "@/utils/validators";
+import { db, auth, serverTimestamp } from "@/lib/firebaseAdmin";
+import {
+  buildUserPayload,
+  normalizeString,
+  shopCreateSchema,
+  toIsoDate,
+  userCreateSchema,
+} from "@/utils/validators";
 import { env } from "@/config/env.config";
+import { APP_LANGUAGE, USER_ROLES } from "@/constants/enums";
+import QRCode from "qrcode";
+import { constructQRURL } from "@/utils";
+import { storage, ID } from "@/lib/appwriteServices";
 
-const COLLECTION = env.FIREBASE_USER_COLLECTION_ID;
+
+const FB_USER_COLLECTION = env.FIREBASE_USER_COLLECTION_ID;
+const FB_SHOP_COLLECTION = env.FIREBASE_SHOP_COLLECTION_ID;
 
 export async function POST(req: NextRequest) {
-  
   try {
     const body: any = await req.json();
-    const { errors, payload } = await buildUserPayload(body, true);
 
-    if (errors.length) {
-      return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
-    }
+    const { userData, shopData } = body;
 
-    const existingByEmail = await db
-      .collection(COLLECTION)
-      .where("email", "==", payload?.email)
-      .limit(1)
-      .get();
-
-    if (!existingByEmail.empty) {
+    // Basic validation
+    if (!userData) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "User details are required" },
         { status: 400 }
       );
     }
 
-    const normalizedPayload = (payload || {}) as Record<string, any>;
-    const docRef = normalizedPayload.id
-      ? db.collection(COLLECTION).doc(String(normalizedPayload.id))
-      : db.collection(COLLECTION).doc();
+    if (userData?.role === USER_ROLES.OWNER && !shopData) {
+      return NextResponse.json(
+        { error: "Shop details are required for owner" },
+        { status: 400 }
+      );
+    }
 
-    await docRef.set({
-      ...normalizedPayload,
-      id: docRef.id,
+    // Validate user data
+    const userValidationResult = await userCreateSchema.validate(userData);
+
+    // Create Firebase Auth user
+    const authUserResult = await auth.createUser({
+      email: userValidationResult.email,
+      password: userValidationResult.password,
+      displayName: userValidationResult.name,
+      phoneNumber: "+91" + userValidationResult.phone,
+    });
+
+    if (!authUserResult) {
+      return NextResponse.json({ error: "User not created." }, { status: 400 });
+    }
+
+    // Save user in Firestore
+    const savedUserRef = await db.collection(FB_USER_COLLECTION).add({
+      uid: authUserResult.uid,
+      name: userValidationResult.name,
+      email: userValidationResult.email,
+      phone: userValidationResult.phone,
+      role: userValidationResult.role,
+      isActive: true,
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      status: "ACTIVE",
+      language: APP_LANGUAGE.EN,
+      availableWalletBalance: 0,
+      address: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
+    let shopResponse: any = null;
+
+    // If user is OWNER then create shop
+    if (userValidationResult.role === USER_ROLES.OWNER) {
+      const shopValidationResult = await shopCreateSchema.validate(shopData);
+
+      const savedShopRef = await db.collection(FB_SHOP_COLLECTION).add({
+        isActive: true,
+        status: "ACTIVE",
+        availableWalletBalance: 0,
+        address: null,
+        shopName: shopValidationResult.shopName,
+        shopType: shopValidationResult.shopType,
+        hasSeating: shopValidationResult.hasSeating,
+        totalFloors: shopValidationResult.totalFloors,
+        isVerified: false,
+        logoURL: shopData.logoURL || null,
+        bannerImageURL: shopData.bannerImageURL || null,
+        ownerUID: authUserResult.uid,
+        shopQR: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Generate QR
+      const qrURL = constructQRURL({
+        entityName: shopValidationResult.shopName,
+        entityType: "SHOP",
+        entityId: savedShopRef.id,
+      });
+
+      const shopQRBase64 = await QRCode.toDataURL(qrURL);
+      const base64Data = shopQRBase64.replace(/^data:image\/png;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+      const uploadedFile = await storage.createFile(
+        env.APPWRITE_STORAGE_BUCKET_ID,
+        ID.unique(),
+        new File([buffer], `qr_${shopValidationResult.shopName.replace(/\s+/g, "_")}_${Date.now()}.png`, {
+          type: "image/png",
+        })
+      );
+
+      const qrImageURL = `${env.APPWRITE_ENDPOINT}/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${uploadedFile.$id}/view?project=${env.APPWRITE_PROJECT_ID}`;
+
+      // Update shop with QR
+      await db.collection(FB_SHOP_COLLECTION).doc(savedShopRef.id).update({
+        shopQR: qrImageURL,
+      });
+
+      shopResponse = {
+        id: savedShopRef.id,
+        ...shopValidationResult,
+        shopQR: qrImageURL,
+      };
+    }
+
     return NextResponse.json(
-      { message: "User created", id: docRef.id },
+      {
+        message: "User and Shop Created Successfully",
+        data: {
+          user: {
+            id: savedUserRef.id,
+            uid: authUserResult.uid,
+            ...userValidationResult,
+          },
+          shop: shopResponse,
+        },
+      },
       { status: 201 }
     );
   } catch (error: any) {
-    console.log('user create error ', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -56,7 +155,7 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (id) {
-      const doc = await db.collection(COLLECTION).doc(id).get();
+      const doc = await db.collection(FB_USER_COLLECTION).doc(id).get();
 
       if (!doc.exists) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -82,7 +181,7 @@ export async function GET(req: NextRequest) {
         ? Math.min(limitParam, 100)
         : 10;
 
-    const snapshot = await db.collection(COLLECTION).orderBy("createdAt", "desc").get();
+    const snapshot = await db.collection(FB_USER_COLLECTION).orderBy("createdAt", "desc").get();
 
     const allUsers = snapshot.docs.map((doc, index) => {
       const data: any = doc.data() || {};
@@ -97,20 +196,20 @@ export async function GET(req: NextRequest) {
 
     const filteredUsers = search
       ? allUsers.filter((user: any) => {
-          const name = String(user.name || "").toLowerCase();
-          const email = String(user.email || "").toLowerCase();
-          const phone = String(user.phone || "").toLowerCase();
-          const role = String(user.role || "").toLowerCase();
-          const status = String(user.status || "").toLowerCase();
+        const name = String(user.name || "").toLowerCase();
+        const email = String(user.email || "").toLowerCase();
+        const phone = String(user.phone || "").toLowerCase();
+        const role = String(user.role || "").toLowerCase();
+        const status = String(user.status || "").toLowerCase();
 
-          return (
-            name.includes(search) ||
-            email.includes(search) ||
-            phone.includes(search) ||
-            role.includes(search) ||
-            status.includes(search)
-          );
-        })
+        return (
+          name.includes(search) ||
+          email.includes(search) ||
+          phone.includes(search) ||
+          role.includes(search) ||
+          status.includes(search)
+        );
+      })
       : allUsers;
 
     const total = filteredUsers.length;
@@ -157,7 +256,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const docRef = db.collection(COLLECTION).doc(id);
+    const docRef = db.collection(FB_USER_COLLECTION).doc(id);
     const existing = await docRef.get();
 
     if (!existing.exists) {
@@ -166,7 +265,7 @@ export async function PUT(req: NextRequest) {
 
     if (payload.email) {
       const existingByEmail = await db
-        .collection(COLLECTION)
+        .collection(FB_USER_COLLECTION)
         .where("email", "==", payload.email)
         .limit(1)
         .get();
