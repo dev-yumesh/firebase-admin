@@ -191,12 +191,16 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
 
     // -------------------------
-    // GET Single User
+    // GET Single User by UID
     // -------------------------
     if (id) {
-      const doc = await db.collection(FB_USER_COLLECTION).doc(id).get();
+      const snapshot = await db
+        .collection(FB_USER_COLLECTION)
+        .where("uid", "==", id)
+        .limit(1)
+        .get();
 
-      if (!doc.exists) {
+      if (snapshot.empty) {
         return NextResponse.json(
           {
             success: false,
@@ -206,6 +210,7 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      const doc = snapshot.docs[0];
       const data: any = doc.data() || {};
 
       return NextResponse.json({
@@ -237,11 +242,11 @@ export async function GET(req: NextRequest) {
       .orderBy("createdAt", "desc")
       .get();
 
-    const allUsers = snapshot.docs.map((doc, index) => {
+    const allUsers = snapshot.docs.map((doc) => {
       const data: any = doc.data() || {};
 
       return {
-        id: doc.id ?? index + 1,
+        id: doc.id,
         ...data,
         createdAt: toIsoDate(data.createdAt),
         updatedAt: toIsoDate(data.updatedAt),
