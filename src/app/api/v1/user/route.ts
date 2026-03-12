@@ -13,35 +13,45 @@ import QRCode from "qrcode";
 import { constructQRURL } from "@/utils";
 import { storage, ID } from "@/lib/appwriteServices";
 
-
 const FB_USER_COLLECTION = env.FIREBASE_USER_COLLECTION_ID;
 const FB_SHOP_COLLECTION = env.FIREBASE_SHOP_COLLECTION_ID;
 
 export async function POST(req: NextRequest) {
   try {
     const body: any = await req.json();
-
     const { userData, shopData } = body;
 
+    // -------------------------
     // Basic validation
+    // -------------------------
     if (!userData) {
       return NextResponse.json(
-        { error: "User details are required" },
+        {
+          success: false,
+          error: "User details are required",
+        },
         { status: 400 }
       );
     }
 
     if (userData?.role === USER_ROLES.OWNER && !shopData) {
       return NextResponse.json(
-        { error: "Shop details are required for owner" },
+        {
+          success: false,
+          error: "Shop details are required for owner",
+        },
         { status: 400 }
       );
     }
 
+    // -------------------------
     // Validate user data
+    // -------------------------
     const userValidationResult = await userCreateSchema.validate(userData);
 
+    // -------------------------
     // Create Firebase Auth user
+    // -------------------------
     const authUserResult = await auth.createUser({
       email: userValidationResult.email,
       password: userValidationResult.password,
@@ -50,10 +60,18 @@ export async function POST(req: NextRequest) {
     });
 
     if (!authUserResult) {
-      return NextResponse.json({ error: "User not created." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User not created",
+        },
+        { status: 400 }
+      );
     }
 
+    // -------------------------
     // Save user in Firestore
+    // -------------------------
     const savedUserRef = await db.collection(FB_USER_COLLECTION).add({
       uid: authUserResult.uid,
       name: userValidationResult.name,
@@ -73,7 +91,9 @@ export async function POST(req: NextRequest) {
 
     let shopResponse: any = null;
 
-    // If user is OWNER then create shop
+    // -------------------------
+    // If OWNER then create shop
+    // -------------------------
     if (userValidationResult.role === USER_ROLES.OWNER) {
       const shopValidationResult = await shopCreateSchema.validate(shopData);
 
@@ -95,7 +115,9 @@ export async function POST(req: NextRequest) {
         updatedAt: serverTimestamp(),
       });
 
+      // -------------------------
       // Generate QR
+      // -------------------------
       const qrURL = constructQRURL({
         entityName: shopValidationResult.shopName,
         entityType: "SHOP",
@@ -105,12 +127,17 @@ export async function POST(req: NextRequest) {
       const shopQRBase64 = await QRCode.toDataURL(qrURL);
       const base64Data = shopQRBase64.replace(/^data:image\/png;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
+
       const uploadedFile = await storage.createFile(
         env.APPWRITE_STORAGE_BUCKET_ID,
         ID.unique(),
-        new File([buffer], `qr_${shopValidationResult.shopName.replace(/\s+/g, "_")}_${Date.now()}.png`, {
-          type: "image/png",
-        })
+        new File(
+          [buffer],
+          `qr_${shopValidationResult.shopName.replace(/\s+/g, "_")}_${Date.now()}.png`,
+          {
+            type: "image/png",
+          }
+        )
       );
 
       const qrImageURL = `${env.APPWRITE_ENDPOINT}/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${uploadedFile.$id}/view?project=${env.APPWRITE_PROJECT_ID}`;
@@ -127,8 +154,12 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    // -------------------------
+    // Success Response
+    // -------------------------
     return NextResponse.json(
       {
+        success: true,
         message: "User and Shop Created Successfully",
         data: {
           user: {
@@ -142,8 +173,13 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
+    console.log("error in user create", error);
+
     return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
+      {
+        success: false,
+        error: error?.message || "Internal Server Error",
+      },
       { status: 500 }
     );
   }
@@ -154,23 +190,38 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
+    // -------------------------
+    // GET Single User
+    // -------------------------
     if (id) {
       const doc = await db.collection(FB_USER_COLLECTION).doc(id).get();
 
       if (!doc.exists) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: "User not found",
+          },
+          { status: 404 }
+        );
       }
 
       const data: any = doc.data() || {};
 
       return NextResponse.json({
-        id: doc.id,
-        ...data,
-        createdAt: toIsoDate(data.createdAt),
-        updatedAt: toIsoDate(data.updatedAt),
+        success: true,
+        data: {
+          id: doc.id,
+          ...data,
+          createdAt: toIsoDate(data.createdAt),
+          updatedAt: toIsoDate(data.updatedAt),
+        },
       });
     }
 
+    // -------------------------
+    // Pagination Params
+    // -------------------------
     const pageParam = Number(searchParams.get("page") || "1");
     const limitParam = Number(searchParams.get("limit") || "10");
     const search = (searchParams.get("search") || "").trim().toLowerCase();
@@ -181,7 +232,10 @@ export async function GET(req: NextRequest) {
         ? Math.min(limitParam, 100)
         : 10;
 
-    const snapshot = await db.collection(FB_USER_COLLECTION).orderBy("createdAt", "desc").get();
+    const snapshot = await db
+      .collection(FB_USER_COLLECTION)
+      .orderBy("createdAt", "desc")
+      .get();
 
     const allUsers = snapshot.docs.map((doc, index) => {
       const data: any = doc.data() || {};
@@ -194,22 +248,25 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // -------------------------
+    // Search Filter
+    // -------------------------
     const filteredUsers = search
       ? allUsers.filter((user: any) => {
-        const name = String(user.name || "").toLowerCase();
-        const email = String(user.email || "").toLowerCase();
-        const phone = String(user.phone || "").toLowerCase();
-        const role = String(user.role || "").toLowerCase();
-        const status = String(user.status || "").toLowerCase();
+          const name = String(user.name || "").toLowerCase();
+          const email = String(user.email || "").toLowerCase();
+          const phone = String(user.phone || "").toLowerCase();
+          const role = String(user.role || "").toLowerCase();
+          const status = String(user.status || "").toLowerCase();
 
-        return (
-          name.includes(search) ||
-          email.includes(search) ||
-          phone.includes(search) ||
-          role.includes(search) ||
-          status.includes(search)
-        );
-      })
+          return (
+            name.includes(search) ||
+            email.includes(search) ||
+            phone.includes(search) ||
+            role.includes(search) ||
+            status.includes(search)
+          );
+        })
       : allUsers;
 
     const total = filteredUsers.length;
@@ -219,16 +276,25 @@ export async function GET(req: NextRequest) {
     const items = filteredUsers.slice(start, start + limit);
 
     return NextResponse.json({
-      items,
-      pagination: {
-        page: safePage,
-        limit,
-        total,
-        totalPages,
+      success: true,
+      data: {
+        items,
+        pagination: {
+          page: safePage,
+          limit,
+          total,
+          totalPages,
+        },
       },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Internal Server Error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -237,21 +303,37 @@ export async function PUT(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const idFromQuery = searchParams.get("id");
     const body: any = await req.json();
+
     const id = normalizeString(idFromQuery || body.id);
 
     if (!id) {
-      return NextResponse.json({ error: "id required" }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User id is required",
+        },
+        { status: 400 }
+      );
     }
 
     const { errors, payload } = await buildUserPayload(body, false);
 
     if (errors.length) {
-      return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: errors.join(", "),
+        },
+        { status: 400 }
+      );
     }
 
     if (!payload || Object.keys(payload).length === 0) {
       return NextResponse.json(
-        { error: "No valid fields provided for update" },
+        {
+          success: false,
+          error: "No valid fields provided for update",
+        },
         { status: 400 }
       );
     }
@@ -260,9 +342,18 @@ export async function PUT(req: NextRequest) {
     const existing = await docRef.get();
 
     if (!existing.exists) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User not found",
+        },
+        { status: 404 }
+      );
     }
 
+    // -------------------------
+    // Email duplicate check
+    // -------------------------
     if (payload.email) {
       const existingByEmail = await db
         .collection(FB_USER_COLLECTION)
@@ -270,10 +361,16 @@ export async function PUT(req: NextRequest) {
         .limit(1)
         .get();
 
-      const duplicateEmail = existingByEmail.docs.find((doc) => doc.id !== id);
+      const duplicateEmail = existingByEmail.docs.find(
+        (doc) => doc.id !== id
+      );
+
       if (duplicateEmail) {
         return NextResponse.json(
-          { error: "User with this email already exists" },
+          {
+            success: false,
+            error: "User with this email already exists",
+          },
           { status: 400 }
         );
       }
@@ -284,8 +381,17 @@ export async function PUT(req: NextRequest) {
       updatedAt: serverTimestamp(),
     });
 
-    return NextResponse.json({ message: "User updated" });
+    return NextResponse.json({
+      success: true,
+      message: "User updated successfully",
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Internal Server Error",
+      },
+      { status: 500 }
+    );
   }
 }
