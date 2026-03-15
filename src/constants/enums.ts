@@ -6,7 +6,7 @@ export const USER_ROLES = {
 
 export const SHOP_TYPES = {
     STALL:"STALL",
-    RESTORENT:"RESTORENT"
+    RESTAURANT:"RESTAURANT"
 }
 
 export const APP_LANGUAGE = {

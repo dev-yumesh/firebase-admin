@@ -172,13 +172,51 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.log("error in user create", error);
+  }catch (error: any) {
 
+    console.log("error in user create", error);
+  
+    // Firebase phone duplicate
+    if (error.code === "auth/phone-number-already-exists") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Phone number already registered",
+          errorCode: "PHONE_EXISTS"
+        },
+        { status: 400 }
+      );
+    }
+  
+    // Firebase email duplicate
+    if (error.code === "auth/email-already-exists") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Email already registered",
+          errorCode: "EMAIL_EXISTS"
+        },
+        { status: 400 }
+      );
+    }
+  
+    // Validation error
+    if (error.name === "ValidationError") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          errorCode: "VALIDATION_ERROR"
+        },
+        { status: 400 }
+      );
+    }
+  
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Internal Server Error",
+        error: "Something went wrong",
+        errorCode: "SERVER_ERROR"
       },
       { status: 500 }
     );

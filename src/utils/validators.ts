@@ -1,7 +1,7 @@
 import * as yup from "yup";
 
 const USER_ROLES = ["CUSTOMER", "OWNER", "MANAGER"] as const;
-const SHOP_TYPES = ["STALL", "RESTORENT"] as const;
+const SHOP_TYPES = ["STALL", "RESTAURANT"] as const;
 
 const ENTITY_STATUS = ["ACTIVE", "INACTIVE"] as const;
 const APP_PLATFORMS = ["ALL", "ANDROID", "IOS", "WEB"] as const;
