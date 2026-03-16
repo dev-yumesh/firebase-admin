@@ -10,21 +10,15 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
 
     const id = searchParams.get("id");
-    const ownerId = searchParams.get("ownerId");
-    console.log('ownerID', ownerId)
+    const ownerID = searchParams.get("ownerID");
 
     // -------------------------
     // GET Single Shop
     // -------------------------
-    if (ownerId) {
-      const snapshot = await db
-        .collection(COLLECTION)
-        .where("ownerUID", "==", ownerId)
-        .where("isPrimary", "==", true)
-        .limit(1)
-        .get();
-    
-      if (snapshot.empty) {
+    if (id) {
+      const doc = await db.collection(COLLECTION).doc(id).get();
+
+      if (!doc.exists) {
         return NextResponse.json(
           {
             success: false,
@@ -33,10 +27,9 @@ export async function GET(req: NextRequest) {
           { status: 404 }
         );
       }
-    
-      const doc = snapshot.docs[0];
+
       const data: any = doc.data() || {};
-    
+
       return NextResponse.json({
         success: true,
         data: {
@@ -69,8 +62,8 @@ export async function GET(req: NextRequest) {
       .orderBy("createdAt", "desc");
 
     // Owner filter
-    if (ownerId) {
-      query = query.where("ownerId", "==", ownerId);
+    if (ownerID) {
+      query = query.where("ownerId", "==", ownerID);
     }
 
     const snapshot = await query.get();

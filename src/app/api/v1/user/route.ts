@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
         shopQR: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        isPrimary:true
       });
 
       // -------------------------
