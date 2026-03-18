@@ -6,6 +6,7 @@ import {
   shopCreateSchema,
   toIsoDate,
   userCreateSchema,
+  userUpdateSchema,
 } from "@/utils/validators";
 import { env } from "@/config/env.config";
 import { APP_LANGUAGE, USER_ROLES } from "@/constants/enums";
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
         shopQR: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        isPrimary:true
+        isPrimary: true
       });
 
       // -------------------------
@@ -173,10 +174,10 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  }catch (error: any) {
+  } catch (error: any) {
 
     console.log("error in user create", error);
-  
+
     // Firebase phone duplicate
     if (error.code === "auth/phone-number-already-exists") {
       return NextResponse.json(
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-  
+
     // Firebase email duplicate
     if (error.code === "auth/email-already-exists") {
       return NextResponse.json(
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-  
+
     // Validation error
     if (error.name === "ValidationError") {
       return NextResponse.json(
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-  
+
     return NextResponse.json(
       {
         success: false,
@@ -297,20 +298,20 @@ export async function GET(req: NextRequest) {
     // -------------------------
     const filteredUsers = search
       ? allUsers.filter((user: any) => {
-          const name = String(user.name || "").toLowerCase();
-          const email = String(user.email || "").toLowerCase();
-          const phone = String(user.phone || "").toLowerCase();
-          const role = String(user.role || "").toLowerCase();
-          const status = String(user.status || "").toLowerCase();
+        const name = String(user.name || "").toLowerCase();
+        const email = String(user.email || "").toLowerCase();
+        const phone = String(user.phone || "").toLowerCase();
+        const role = String(user.role || "").toLowerCase();
+        const status = String(user.status || "").toLowerCase();
 
-          return (
-            name.includes(search) ||
-            email.includes(search) ||
-            phone.includes(search) ||
-            role.includes(search) ||
-            status.includes(search)
-          );
-        })
+        return (
+          name.includes(search) ||
+          email.includes(search) ||
+          phone.includes(search) ||
+          role.includes(search) ||
+          status.includes(search)
+        );
+      })
       : allUsers;
 
     const total = filteredUsers.length;
@@ -344,96 +345,108 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const idFromQuery = searchParams.get("id");
-    const body: any = await req.json();
+    const body = await req.json();
 
-    const id = normalizeString(idFromQuery || body.id);
 
-    if (!id) {
+    const { userDocId, updateUserData, updateShopData } = body;
+
+    if (!userDocId) {
+      return NextResponse.json(
+        { success: false, error: "User UID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!updateUserData || !updateShopData ) {
+      return NextResponse.json(
+        { success: false, error: "Update data required" },
+        { status: 400 }
+      );
+    }
+
+    // ❌ Block email & phone updates
+    if (updateUserData.email || updateUserData.phone) {
       return NextResponse.json(
         {
           success: false,
-          error: "User id is required",
+          error: "Email and phone cannot be updated",
         },
         { status: 400 }
       );
     }
 
-    const { errors, payload } = await buildUserPayload(body, false);
+    // --------------------------------
+    // Update Firebase Auth
+    // --------------------------------
+    // await auth.updateUser(userUId, {
+    //   displayName: updateData.name,
+    //   photoURL: updateData.photoURL,
+    // });
 
-    if (errors.length) {
+    // --------------------------------
+    // Check if Firestore doc exists
+    // --------------------------------
+    const userDocRef = db.collection(FB_USER_COLLECTION).doc(userDocId);
+    const userDoc = await userDocRef.get();
+
+    const shopDocRef = db.collection(FB_SHOP_COLLECTION).doc(updateShopData?.id);
+    const shopDoc = await shopDocRef.get();
+
+    if (!userDoc.exists) {
       return NextResponse.json(
         {
           success: false,
-          error: errors.join(", "),
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!payload || Object.keys(payload).length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "No valid fields provided for update",
-        },
-        { status: 400 }
-      );
-    }
-
-    const docRef = db.collection(FB_USER_COLLECTION).doc(id);
-    const existing = await docRef.get();
-
-    if (!existing.exists) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "User not found",
+          error: "User document not found",
         },
         { status: 404 }
       );
     }
 
-    // -------------------------
-    // Email duplicate check
-    // -------------------------
-    if (payload.email) {
-      const existingByEmail = await db
-        .collection(FB_USER_COLLECTION)
-        .where("email", "==", payload.email)
-        .limit(1)
-        .get();
-
-      const duplicateEmail = existingByEmail.docs.find(
-        (doc) => doc.id !== id
+    if (!shopDoc.exists) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Shop document not found",
+        },
+        { status: 404 }
       );
-
-      if (duplicateEmail) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "User with this email already exists",
-          },
-          { status: 400 }
-        );
-      }
     }
 
-    await docRef.update({
-      ...payload,
+     
+
+    // --------------------------------
+    // Update Firestore
+    // --------------------------------
+    await userDocRef.update({
+      ...updateUserData,
       updatedAt: serverTimestamp(),
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "User updated successfully",
+    await shopDocRef.update({
+      ...updateShopData,
+      updatedAt: serverTimestamp(),
     });
+
+    const updatedUserDoc = (await userDocRef.get()).data();
+    const updatedShopDoc = (await shopDocRef.get()).data();
+
+
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "User updated successfully",
+        data: { userData: updatedUserDoc, shopData :updatedShopDoc}
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
+    console.log("error in user update", error);
+
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Internal Server Error",
+        error: "Something went wrong",
       },
       { status: 500 }
     );
