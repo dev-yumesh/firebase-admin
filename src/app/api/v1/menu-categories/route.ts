@@ -79,6 +79,9 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
     const slug = searchParams.get("slug");
 
+    // -------------------------
+    // GET Single Category
+    // -------------------------
     if (id || slug) {
       let doc: any = null;
 
@@ -91,25 +94,35 @@ export async function GET(req: NextRequest) {
           .limit(1)
           .get();
 
-        doc = matchBySlug.docs[0] || null;
+        doc = matchBySlug.empty ? null : matchBySlug.docs[0];
       }
 
       if (!doc || !doc.exists) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Not found",
+          },
+          { status: 404 }
+        );
       }
 
       const data: any = doc.data() || {};
 
-      const normalized = {
-        id: doc.id,
-        ...data,
-        createdAt: toIsoDate(data.createdAt),
-        updatedAt: toIsoDate(data.updatedAt),
-      };
-
-      return NextResponse.json(normalized);
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: doc.id,
+          ...data,
+          createdAt: toIsoDate(data.createdAt),
+          updatedAt: toIsoDate(data.updatedAt),
+        },
+      });
     }
 
+    // -------------------------
+    // Pagination Params
+    // -------------------------
     const pageParam = Number(searchParams.get("page") || "1");
     const limitParam = Number(searchParams.get("limit") || "10");
     const search = (searchParams.get("search") || "").trim().toLowerCase();
@@ -125,17 +138,20 @@ export async function GET(req: NextRequest) {
       .orderBy("sortOrder", "asc")
       .get();
 
-    const allCategories = snapshot.docs.map((doc, index) => {
+    const allCategories = snapshot.docs.map((doc) => {
       const data: any = doc.data() || {};
 
       return {
-        id: doc.id ?? index + 1,
+        id: doc.id,
         ...data,
         createdAt: toIsoDate(data.createdAt),
         updatedAt: toIsoDate(data.updatedAt),
       };
     });
 
+    // -------------------------
+    // Search Filter
+    // -------------------------
     const filteredCategories = search
       ? allCategories.filter((category: any) => {
           const title = String(category.title || "").toLowerCase();
@@ -157,19 +173,27 @@ export async function GET(req: NextRequest) {
     const items = filteredCategories.slice(start, start + limit);
 
     return NextResponse.json({
-      items,
-      pagination: {
-        page: safePage,
-        limit,
-        total,
-        totalPages,
+      success: true,
+      data: {
+        items,
+        pagination: {
+          page: safePage,
+          limit,
+          total,
+          totalPages,
+        },
       },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Internal Server Error",
+      },
+      { status: 500 }
+    );
   }
 }
-
 // Update category (?id=... or ?slug=...)
 export async function PUT(req: NextRequest) {
   try {
