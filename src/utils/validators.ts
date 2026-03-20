@@ -174,6 +174,60 @@ export const shopCreateSchema = yup.object({
     .url("bannerImageURL must be a valid URL"),
 });
 
+// Used for partial updates (PUT).
+export const shopUpdateSchema = yup.object({
+  shopName: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired(),
+  shopType: yup
+    .string()
+    .transform((_, originalValue) => trimUpperString(originalValue))
+    .notRequired()
+    .oneOf(SHOP_TYPES, "shopType must be one of RESTAURANT, SHOP, CAFE"),
+  hasSeating: yup.boolean().notRequired(),
+  totalFloors: yup
+    .number()
+    .typeError("totalFloors must be a number")
+    .min(0, "totalFloors cannot be negative")
+    .notRequired(),
+  logoURL: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired()
+    .url("logoURL must be a valid URL"),
+  bannerImageURL: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired()
+    .url("bannerImageURL must be a valid URL"),
+
+  // Common shop metadata fields (some may be optional depending on your data model).
+  ownerUID: yup.string().notRequired(),
+  ownerId: yup.string().notRequired(),
+  shopEmail: yup
+    .string()
+    .transform((_, originalValue) => trimLowerString(originalValue))
+    .notRequired()
+    .email("shopEmail is invalid"),
+  shopQR: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired(),
+  isVerified: yup.boolean().notRequired(),
+  isOwnerVerified: yup.boolean().notRequired(),
+  isEmailVerified: yup.boolean().notRequired(),
+  isActive: yup.boolean().notRequired(),
+  status: yup
+    .string()
+    .transform((_, originalValue) => trimUpperString(originalValue))
+    .notRequired()
+    .oneOf(ENTITY_STATUS, "status must be one of ACTIVE, INACTIVE"),
+  isPrimary: yup.boolean().notRequired(),
+  availableWalletBalance: yup.number().notRequired(),
+  address: yup.mixed().notRequired(),
+});
+
 export const userUpdateSchema = yup.object({
   name: yup
     .string()
