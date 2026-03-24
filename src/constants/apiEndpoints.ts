@@ -8,11 +8,11 @@ export const API_ENDPOINTS = {
     detail: (id: string | number) => `/api/v1/shop?id=${encodeURIComponent(String(id))}`,
   },
   menuCategories: {
-    list: "/api/v1/menu-category",
+    list: "/api/v1/menu-categories",
     bySlug: (slug: string) =>
-      `/api/v1/menu-category?slug=${encodeURIComponent(slug)}`,
+      `/api/v1/menu-categories?slug=${encodeURIComponent(slug)}`,
     byId: (id: string | number) =>
-      `/api/v1/menu-category?id=${encodeURIComponent(String(id))}`,
+      `/api/v1/menu-categories?id=${encodeURIComponent(String(id))}`,
   },
   appSettings: {
     list: "/api/v1/app-setting",

@@ -81,13 +81,17 @@ export const fetchMenuCategoriesThunk = createAsyncThunk<
         }
       }
 
+      const payload = data?.data ?? data
+      const items = payload?.items ?? []
+      const apiPagination = payload?.pagination ?? {}
+
       return {
-        items: data?.items || [],
+        items,
         pagination: {
-          page: Number(data?.pagination?.page || page),
-          limit: Number(data?.pagination?.limit || limit),
-          total: Number(data?.pagination?.total || 0),
-          totalPages: Math.max(1, Number(data?.pagination?.totalPages || 1)),
+          page: Number(apiPagination?.page || page),
+          limit: Number(apiPagination?.limit || limit),
+          total: Number(apiPagination?.total || 0),
+          totalPages: Math.max(1, Number(apiPagination?.totalPages || 1)),
         },
       }
     } catch (error) {

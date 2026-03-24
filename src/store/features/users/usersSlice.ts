@@ -71,14 +71,17 @@ export const fetchUsersThunk = createAsyncThunk<
     }
 
     const { data } = await axiosClient.get(`${API_ENDPOINTS.users.list}?${params.toString()}`)
+    const payload = data?.data ?? data
+    const items = payload?.items ?? []
+    const apiPagination = payload?.pagination ?? {}
 
     return {
-      items: data?.items || [],
+      items,
       pagination: {
-        page: Number(data?.pagination?.page || page),
-        limit: Number(data?.pagination?.limit || limit),
-        total: Number(data?.pagination?.total || 0),
-        totalPages: Math.max(1, Number(data?.pagination?.totalPages || 1)),
+        page: Number(apiPagination?.page || page),
+        limit: Number(apiPagination?.limit || limit),
+        total: Number(apiPagination?.total || 0),
+        totalPages: Math.max(1, Number(apiPagination?.totalPages || 1)),
       },
     }
   } catch (error) {
@@ -93,7 +96,7 @@ export const fetchUserByIdThunk = createAsyncThunk<
 >("users/fetchById", async (id, { rejectWithValue }) => {
   try {
     const { data } = await axiosClient.get(API_ENDPOINTS.users.detail(id))
-    return data
+    return data?.data ?? data
   } catch (error) {
     return rejectWithValue(getErrorMessage(error))
   }

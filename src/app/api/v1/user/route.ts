@@ -231,26 +231,32 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
 
     // -------------------------
-    // GET Single User by UID
+    // GET Single User by document id or UID
     // -------------------------
     if (id) {
-      const snapshot = await db
-        .collection(FB_USER_COLLECTION)
-        .where("uid", "==", id)
-        .limit(1)
-        .get();
+      const docById = await db.collection(FB_USER_COLLECTION).doc(String(id)).get();
+      let doc: any = docById;
 
-      if (snapshot.empty) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "User not found",
-          },
-          { status: 404 }
-        );
+      if (!docById.exists) {
+        const snapshot = await db
+          .collection(FB_USER_COLLECTION)
+          .where("uid", "==", String(id))
+          .limit(1)
+          .get();
+
+        if (snapshot.empty) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "User not found",
+            },
+            { status: 404 }
+          );
+        }
+
+        doc = snapshot.docs[0];
       }
 
-      const doc = snapshot.docs[0];
       const data: any = doc.data() || {};
 
       return NextResponse.json({
