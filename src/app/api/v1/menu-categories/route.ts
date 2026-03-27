@@ -59,12 +59,21 @@ export async function POST(req: NextRequest) {
 
     const docRef = db.collection(COLLECTION).doc();
 
-    await docRef.set({
+    const payload = {
       ...body,
       slug,
+      groupType: body.groupType,
+      icon: body.icon,
+      color: body.color,
+      isSystemDefined: body.isSystemDefined ?? false,
+      isFilterable: body.isFilterable ?? true,
+      isMultiSelectable: body.isMultiSelectable ?? false,
+      isActive: body.isActive ?? true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    await docRef.set(payload);
 
     return NextResponse.json({ message: "Category created", id: docRef.id });
   } catch (error: any) {

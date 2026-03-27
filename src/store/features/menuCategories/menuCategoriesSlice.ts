@@ -10,6 +10,12 @@ export interface MenuCategory {
   title: string
   description: string
   logo?: string
+  icon?: string
+  color?: string
+  groupType?: string
+  isSystemDefined?: boolean
+  isFilterable?: boolean
+  isMultiSelectable?: boolean
   status: string
   isActive: boolean
   sortOrder: number
@@ -169,4 +175,3 @@ const menuCategoriesSlice = createSlice({
 })
 
 export default menuCategoriesSlice.reducer
-

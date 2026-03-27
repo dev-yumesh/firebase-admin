@@ -7,6 +7,8 @@ import Button from "../ui/button/Button";
 import FileInput from "./input/FileInput";
 import Switch from "./switch/Switch";
 import Alert from "../ui/alert/Alert";
+import Select from "./Select";
+import { MENU_CATEGORY_GROUP_TYPE } from "@/constants/enums";
 
 interface AddMenuFormProps {
   isOpen: boolean;
@@ -20,9 +22,24 @@ interface AddMenuFormProps {
     sortOrder?: number | string;
     isActive?: boolean;
     logo?: string;
+    icon?: string;
+    color?: string;
+    groupType?: string;
+    isSystemDefined?: boolean;
+    isFilterable?: boolean;
+    isMultiSelectable?: boolean;
   } | null;
   handleDelete?: () => Promise<void>;
 }
+
+const GROUP_TYPE_OPTIONS = Object.values(MENU_CATEGORY_GROUP_TYPE).map(
+  (value) => ({
+    value,
+    label: value.replace(/_/g, " "),
+  }),
+);
+
+const DEFAULT_GROUP_TYPE = MENU_CATEGORY_GROUP_TYPE.DIETARY_BASED;
 
 const AddMenuForm = ({
   isOpen,
@@ -39,6 +56,12 @@ const AddMenuForm = ({
     sortOrder: number | string;
     isActive: boolean;
     imageFile: File | null;
+    icon: string;
+    color: string;
+    groupType: string;
+    isSystemDefined: boolean;
+    isFilterable: boolean;
+    isMultiSelectable: boolean;
   }>({
     slug: "",
     title: "",
@@ -46,6 +69,12 @@ const AddMenuForm = ({
     sortOrder: 1,
     isActive: true,
     imageFile: null,
+    icon: "",
+    color: "#22c55e",
+    groupType: DEFAULT_GROUP_TYPE,
+    isSystemDefined: false,
+    isFilterable: true,
+    isMultiSelectable: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -71,6 +100,12 @@ const AddMenuForm = ({
         sortOrder: initialData.sortOrder ?? 1,
         isActive: initialData.isActive ?? true,
         imageFile: null,
+        icon: initialData.icon ?? "",
+        color: initialData.color ?? "#22c55e",
+        groupType: initialData.groupType ?? DEFAULT_GROUP_TYPE,
+        isSystemDefined: initialData.isSystemDefined ?? false,
+        isFilterable: initialData.isFilterable ?? true,
+        isMultiSelectable: initialData.isMultiSelectable ?? false,
       });
       setPreviewUrl(initialData.logo ?? null);
       return;
@@ -83,6 +118,12 @@ const AddMenuForm = ({
       sortOrder: 1,
       isActive: true,
       imageFile: null,
+      icon: "",
+      color: "#22c55e",
+      groupType: DEFAULT_GROUP_TYPE,
+      isSystemDefined: false,
+      isFilterable: true,
+      isMultiSelectable: false,
     });
 
   }, [isOpen, initialData, mode]);
@@ -174,8 +215,66 @@ const AddMenuForm = ({
               />
             </div>
 
+            {/* Group Type */}
+            <div>
+              <Label>Group Type</Label>
+              <Select
+                key={`${isOpen}-${formData.groupType}`}
+                options={GROUP_TYPE_OPTIONS}
+                defaultValue={formData.groupType}
+                placeholder="Select group type"
+                onChange={(value) => handleChange("groupType", value)}
+              />
+            </div>
+
+            {/* Icon */}
+            <div>
+              <Label>Icon</Label>
+              <Input
+                type="text"
+                value={formData.icon}
+                onChange={(e) => handleChange("icon", e.target.value)}
+                placeholder="veg-icon.png"
+              />
+            </div>
+
+            {/* Color */}
+            <div>
+              <Label>Color</Label>
+              <Input
+                type="color"
+                value={formData.color}
+                onChange={(e) => handleChange("color", e.target.value)}
+                className="h-11 px-2"
+              />
+            </div>
+
             {/* Active switch */}
-            <div className="col-span-2 mt-2">
+            <div className="col-span-2 mt-2 space-y-3">
+              <Switch
+                label="System Defined"
+                checked={formData.isSystemDefined}
+                defaultChecked={formData.isSystemDefined}
+                onChange={(checked: boolean) =>
+                  handleChange("isSystemDefined", checked)
+                }
+              />
+              <Switch
+                label="Filterable"
+                checked={formData.isFilterable}
+                defaultChecked={formData.isFilterable}
+                onChange={(checked: boolean) =>
+                  handleChange("isFilterable", checked)
+                }
+              />
+              <Switch
+                label="Multi Selectable"
+                checked={formData.isMultiSelectable}
+                defaultChecked={formData.isMultiSelectable}
+                onChange={(checked: boolean) =>
+                  handleChange("isMultiSelectable", checked)
+                }
+              />
               <Switch
                 label="Active"
                 checked={formData.isActive}

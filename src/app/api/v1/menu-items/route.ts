@@ -5,6 +5,73 @@ import { NextRequest, NextResponse } from "next/server";
 
 const COLLECTION = env.FIREBASE_MENU_ITEMS_COLLECTION_ID;
 
+type MenuItemMedia = {
+    url: string;
+    isPrimary: boolean;
+    type: "video" | "image";
+};
+
+/** Align request body with recipe_book MenuItem / MenuItemFormInput. */
+const normalizeCreateBody = (body: Record<string, unknown>) => {
+    const num = (v: unknown, fallback = 0) =>
+        typeof v === "number" && !Number.isNaN(v) ? v : fallback;
+
+    const asDateStr = (v: unknown) => {
+        if (v == null || v === "") return "";
+        const iso = toIsoDate(v);
+        if (iso) return iso;
+        return typeof v === "string" ? v : "";
+    };
+
+    let categoryIds: string[] = [];
+    if (Array.isArray(body.categoryIds)) {
+        categoryIds = body.categoryIds.map(String).filter(Boolean);
+    } else if (body.categoryId != null && String(body.categoryId).trim()) {
+        categoryIds = [String(body.categoryId)];
+    }
+
+    let medias: MenuItemMedia[] = [];
+    if (Array.isArray(body.medias)) {
+        medias = (body.medias as unknown[]).map((raw) => {
+            const m = raw as Record<string, unknown>;
+            return {
+                url: String(m?.url ?? ""),
+                isPrimary: Boolean(m?.isPrimary),
+                type: m?.type === "video" ? ("video" as const) : ("image" as const),
+            };
+        });
+    }
+    const legacyPhoto =
+        typeof body.photo === "string" && body.photo.trim()
+            ? body.photo.trim()
+            : "";
+    if (!medias.length && legacyPhoto) {
+        medias = [{ url: legacyPhoto, isPrimary: true, type: "image" }];
+    }
+
+    return removeUndefinedFields({
+        name: String(body.name ?? "").trim(),
+        description: String(body.description ?? "").trim(),
+        categoryIds,
+        price: num(body.price, 0),
+        medias,
+        isInOffer: Boolean(body.isInOffer),
+        offerPrice: num(body.offerPrice, 0),
+        offerStartDate: asDateStr(body.offerStartDate),
+        offerEndDate: asDateStr(body.offerEndDate),
+        isHalfAvailable: Boolean(body.isHalfAvailable),
+        quantity: num(body.quantity, 0),
+        quantityUnit: String(body.quantityUnit ?? body.unit ?? "").trim(),
+        isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
+        isAvailable: body.isAvailable !== undefined ? Boolean(body.isAvailable) : true,
+        shopId: String(body.shopId ?? "").trim(),
+        status:
+            body.status != null && String(body.status).trim()
+                ? String(body.status).trim()
+                : "ACTIVE",
+    });
+};
+
 const normalizeDoc = (doc: any) => {
     const data: any = doc.data() || {};
     return {
@@ -18,9 +85,31 @@ const normalizeDoc = (doc: any) => {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
+        const normalized = normalizeCreateBody(
+            body && typeof body === "object" ? body : {},
+        );
+
+        if (!normalized.name) {
+            return NextResponse.json(
+                { success: false, error: "name is required" },
+                { status: 400 },
+            );
+        }
+        if (!normalized.shopId) {
+            return NextResponse.json(
+                { success: false, error: "shopId is required" },
+                { status: 400 },
+            );
+        }
+        if (!normalized.categoryIds?.length) {
+            return NextResponse.json(
+                { success: false, error: "categoryIds is required" },
+                { status: 400 },
+            );
+        }
 
         const newItem = {
-            ...body,
+            ...normalized,
             createdAt: new Date(),
             updatedAt: new Date(),
         };
@@ -93,6 +182,9 @@ export async function GET(req: NextRequest) {
                   const description = String(item.description || "").toLowerCase();
                   const category = String(item.category || "").toLowerCase();
                   const categoryId = String(item.categoryId || "").toLowerCase();
+                  const categoryIdsStr = Array.isArray(item.categoryIds)
+                      ? item.categoryIds.map(String).join(" ").toLowerCase()
+                      : "";
                   const slug = String(item.slug || "").toLowerCase();
 
                   return (
@@ -101,6 +193,7 @@ export async function GET(req: NextRequest) {
                       description.includes(search) ||
                       category.includes(search) ||
                       categoryId.includes(search) ||
+                      categoryIdsStr.includes(search) ||
                       slug.includes(search)
                   );
               })
@@ -153,10 +246,17 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
+        const raw =
+            body && typeof body === "object"
+                ? { ...body, id: undefined, createdAt: undefined }
+                : {};
+        const mergedForNormalize = {
+            ...existing.data(),
+            ...raw,
+        };
+        const normalized = normalizeCreateBody(mergedForNormalize as any);
         const updatePayload = removeUndefinedFields({
-            ...body,
-            id: undefined,
-            createdAt: undefined,
+            ...normalized,
             updatedAt: new Date(),
         });
 
