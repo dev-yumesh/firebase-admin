@@ -168,11 +168,24 @@ const AddMenuForm = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
-      <div className="relative w-full max-w-[700px] rounded-3xl bg-white p-6 dark:bg-gray-900">
-        <h4 className="mb-4 text-2xl font-semibold text-gray-800 dark:text-white/90">
-          {mode === "edit" ? "Edit Menu Category" : "Add Menu Category"}
-        </h4>
+    <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[720px] m-4">
+      <div className="relative w-full max-w-[720px] rounded-3xl bg-white p-6 shadow-xl ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-md"
+            style={{ backgroundColor: formData.color || "#22c55e" }}
+          >
+            {formData.title?.[0]?.toUpperCase() || "M"}
+          </div>
+          <div>
+            <h4 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
+              {mode === "edit" ? "Edit Menu Category" : "Add Menu Category"}
+            </h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Keep it consistent for faster navigation in the menu.
+            </p>
+          </div>
+        </div>
 
         {error && (
           <div className="mb-4">
@@ -194,7 +207,7 @@ const AddMenuForm = ({
             </div>
 
             {/* Slug */}
-            <div>
+            <div className="space-y-1">
               <Label>Slug</Label>
               <Input
                 type="text"
@@ -203,20 +216,26 @@ const AddMenuForm = ({
                 placeholder="starters"
                 disabled={mode === "edit"}
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                URL-friendly key. {mode === "edit" ? "Locked in edit mode." : ""}
+              </p>
             </div>
 
             {/* Sort Order */}
-            <div>
+            <div className="space-y-1">
               <Label>Sort Order</Label>
               <Input
                 type="number"
                 value={formData.sortOrder}
                 onChange={(e) => handleChange("sortOrder", e.target.value)}
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Lower number appears first.
+              </p>
             </div>
 
             {/* Group Type */}
-            <div>
+            <div className="space-y-1">
               <Label>Group Type</Label>
               <Select
                 key={`${isOpen}-${formData.groupType}`}
@@ -225,10 +244,13 @@ const AddMenuForm = ({
                 placeholder="Select group type"
                 onChange={(value) => handleChange("groupType", value)}
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Helps grouping similar menu filters.
+              </p>
             </div>
 
             {/* Icon */}
-            <div>
+            <div className="space-y-1">
               <Label>Icon</Label>
               <Input
                 type="text"
@@ -236,53 +258,66 @@ const AddMenuForm = ({
                 onChange={(e) => handleChange("icon", e.target.value)}
                 placeholder="veg-icon.png"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Optional file name or icon key.
+              </p>
             </div>
 
             {/* Color */}
-            <div>
+            <div className="space-y-1">
               <Label>Color</Label>
-              <Input
-                type="color"
-                value={formData.color}
-                onChange={(e) => handleChange("color", e.target.value)}
-                className="h-11 px-2"
-              />
+              <div className="flex items-center gap-3">
+                <Input
+                  type="color"
+                  value={formData.color}
+                  onChange={(e) => handleChange("color", e.target.value)}
+                  className="h-11 w-16 px-2"
+                />
+                <Input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => handleChange("color", e.target.value)}
+                  placeholder="#22c55e"
+                />
+              </div>
             </div>
 
             {/* Active switch */}
-            <div className="col-span-2 mt-2 space-y-3">
-              <Switch
-                label="System Defined"
-                checked={formData.isSystemDefined}
-                defaultChecked={formData.isSystemDefined}
-                onChange={(checked: boolean) =>
-                  handleChange("isSystemDefined", checked)
-                }
-              />
-              <Switch
-                label="Filterable"
-                checked={formData.isFilterable}
-                defaultChecked={formData.isFilterable}
-                onChange={(checked: boolean) =>
-                  handleChange("isFilterable", checked)
-                }
-              />
-              <Switch
-                label="Multi Selectable"
-                checked={formData.isMultiSelectable}
-                defaultChecked={formData.isMultiSelectable}
-                onChange={(checked: boolean) =>
-                  handleChange("isMultiSelectable", checked)
-                }
-              />
-              <Switch
-                label="Active"
-                checked={formData.isActive}
-                defaultChecked={formData.isActive}
-                onChange={(checked: boolean) =>
-                  handleChange("isActive", checked)
-                }
-              />
+            <div className="col-span-2 mt-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-800/40">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Switch
+                  label="System Defined"
+                  checked={formData.isSystemDefined}
+                  defaultChecked={formData.isSystemDefined}
+                  onChange={(checked: boolean) =>
+                    handleChange("isSystemDefined", checked)
+                  }
+                />
+                <Switch
+                  label="Filterable"
+                  checked={formData.isFilterable}
+                  defaultChecked={formData.isFilterable}
+                  onChange={(checked: boolean) =>
+                    handleChange("isFilterable", checked)
+                  }
+                />
+                <Switch
+                  label="Multi Selectable"
+                  checked={formData.isMultiSelectable}
+                  defaultChecked={formData.isMultiSelectable}
+                  onChange={(checked: boolean) =>
+                    handleChange("isMultiSelectable", checked)
+                  }
+                />
+                <Switch
+                  label="Active"
+                  checked={formData.isActive}
+                  defaultChecked={formData.isActive}
+                  onChange={(checked: boolean) =>
+                    handleChange("isActive", checked)
+                  }
+                />
+              </div>
             </div>
 
             {/* Image Upload */}
@@ -294,15 +329,20 @@ const AddMenuForm = ({
                 }
               />
               {previewUrl && (
-                <div className="mt-3">
-                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                    Preview
-                  </p>
+                <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
                   <img
                     src={previewUrl}
                     alt="Selected preview"
-                    className="h-16 w-16 rounded object-cover border"
+                    className="h-16 w-16 rounded-xl object-cover ring-2 ring-white"
                   />
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      Preview
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Looks good. You can change it anytime.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -311,7 +351,7 @@ const AddMenuForm = ({
             <div className="col-span-2">
               <Label>Description</Label>
               <textarea
-                className="w-full rounded-lg border p-3 dark:bg-gray-800"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:border-gray-800 dark:bg-gray-800/70"
                 rows={3}
                 value={formData.description}
                 onChange={(e) => handleChange("description", e.target.value)}

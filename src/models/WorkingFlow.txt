@@ -1,0 +1,85 @@
+1 Authentication : 
+
+Registration - There is 2 type of registrations 1) For Normal User th and 2) For Shop Owner
+
+1) Normal User (CUSTOMER) :  Registeration Done by providing very basic details (name, email , password)
+   User can update their another fields by updating profile
+2) Shop owner (OWNER) : Ther shop owner can be register by providing their own details (same as CUSTOMER addintional mobile which is also required ) and their shop details 
+   ( shopName: string;
+    shopType: SHOP_TYPE;
+    location:Address
+    hasSeating: boolean;
+    totalFloors: number; ) see practically one owner can be have multiple shops (max 5) so on registration time provided shop data by owner will be marked as primanry shop later on owner can change their primary shop  
+  during registration we will generate the qr code for shop with specific format data url
+
+After Registration user and and shop will get some reward coins user will 500 coins and shop will get 1 lakh coins
+
+In both registration process all fields are mandatory
+
+After Registration Shop need to configure additional details like generate floor data and table wise qr the qr will include shop, floor and table details so after scan from specific qr we easily find out the detail 
+
+Login - CUSTOMER/OWNER can login by using email and password later on we provide email and otp  & mobile and otp 
+Forgot Password - as normal flow for resetting password
+
+Update Profile and Shop Details - By updating details user can fill other remaining fields also he will not verified user yet after providing email and mobile number and after verified both field they will be verified CUSTOMER/OWNER
+
+2 Menu Categories : 
+ 
+ This menu Categories will be provided by adding through superadmin panel and using this categories owner can create the menu items if they will not found the menu category accrding them they can simply request to create custom menu category 
+
+ Structure of menu category (these menu categories are added by super admin it will be available to shop owner so they can add menu items )
+ {
+    id: string; //auto generated
+    slug: string; //user readable url path for seo purpose
+    title: string;
+    description: string;
+    sortOrder: number; //for sorting if superadmin want to show in specific order
+    isActive: boolean;
+    logo: string | null; //photo url 
+    icon: {name:string, type:string,size:number,color:string}; 
+    groupType: MENU_CATEGORY_GROUP_TYPE;
+    isFilterable: boolean;
+    isMultiSelectable: boolean;  // some food category can not be added in menu items with other food category ex veg and non-veg both are the categories that can not be added in a food moenu at a time
+    createdAt: string;
+    updatedAt: string;
+    tags:string [] ; // user serching kewords 
+} 
+
+
+Structure of menu items 
+{
+    id: string;
+    name: string;
+    description: string;
+    categoryIds: string[];
+    price: number;
+    medias: Media_Item[];
+    shopId: string;
+    isActive: boolean;
+    servingQuantity: number;
+    servingUnit: SERVING_UNIT;
+    isAvailable: boolean;
+    isInOffer: boolean;
+    offerPrice: number;
+    offerStartDate: string;
+    offerEndDate: string;
+    status: "ACTIVE";
+    createdAt: string;
+    updatedAt: string;
+    variants:[] //based on different serving size and different price
+}
+
+Shop owner can also add deals and add rewards on it based on various scanario ex combo deal , seassional deal, minimum price order deal etc
+
+3 Scan QR and Order Flow 
+1) User scan the qr code if user scan the shop qr then it will show shop details and if user scan table qr user will see the shop food menu 
+2) User will see the food menus, deals of the shop now he will choose the items and create an order = order initiated
+3) due to real time data transfer it will reflact to the owners dashboard now owner will confirm it for = order preparing
+4) user will enjoy their food and now he paid bill using offline or other upi apps we are not traking any payment data yet 
+5) before/after paying the bill user can request owner to complete the order for this shop owner side will show Complete Order option by clicking it an passkey of 4 digit will available to user side this passkey will be entererd by shop side and Complete the order
+6) after completeting this process the coin amount of the order will be deducted from shop account and credited to users wallet 
+
+4 Redeem the coins 
+1) Redeem by shop owner - after reaching an specified limit of coins shop owner can be able to redeem the coins to real money shop owner will provide upi details using update the profile part these detail will be verify by superadmin and after verify the the real money will be credited to owners bank account by that upi the amount of money can be set by superadmin like 1coins equal how much rupee based on it money will be transfer 
+2) On redeem time - all the coins can not be able to redeem always the some % of coins will be required to keep in wallet
+3) redeem by user - user is also need to provide upi detail to add the balance to their account
