@@ -21,12 +21,13 @@ const normalizeShopDoc = (doc: any) => {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { shopId: string } }
+  { params }: { params: Promise<{ shopId: string }> },
 ) {
   try {
+    const { shopId } = await params;
     const { searchParams } = new URL(req.url);
 
-    const id = params?.shopId || searchParams.get("id");
+    const id = shopId || searchParams.get("id");
     const ownerID = searchParams.get("ownerID");
 
     // -------------------------
@@ -154,13 +155,14 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { shopId: string } }
+  { params }: { params: Promise<{ shopId: string }> },
 ) {
   try {
+    const { shopId } = await params;
     const { searchParams } = new URL(req.url);
     const body: any = await req.json();
 
-    const id = params?.shopId || searchParams.get("id") || body?.id;
+    const id = shopId || searchParams.get("id") || body?.id;
     if (!id) {
       return NextResponse.json(
         { success: false, error: "id is required" },
@@ -215,11 +217,12 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { shopId: string } }
+  { params }: { params: Promise<{ shopId: string }> },
 ) {
   try {
+    const { shopId } = await params;
     const { searchParams } = new URL(req.url);
-    const id = params?.shopId || searchParams.get("id");
+    const id = shopId || searchParams.get("id");
     if (!id) {
       return NextResponse.json(
         { success: false, error: "id is required" },
