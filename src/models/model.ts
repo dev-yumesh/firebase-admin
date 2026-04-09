@@ -6,9 +6,15 @@ export type BLOOD_GROUP = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-
 export type DIETERY_TYPE = "VEG" | "NON_VEG" | "VEGAN";
 export type MENU_CATEGORY_GROUP_TYPE = "DIETARY_BASED" | "SPICE_LEVEL_BASED" | "MEAL_BASED" | "COOKING_BASED" | "CUISINE_BASED" | "AUDIENCE_BASED" | "COURSE_BASED" | "BUSINESS_TAG_BASED";
 export type SERVING_UNIT = "piece" | "slice" | "plate" | "gram" | "kilogram" | "other";
-export type ORDER_STATUS = "PENDING" | "DELIVERED" | "CANCELLED";
+// export type ORDER_STATUS = "PENDING" | "DELIVERED" | "CANCELLED";
 export type ORDER_ITEM_UNIT = "piece" | "slice" | "plate" | "gram" | "kilogram" | "other";
-
+export type ORDER_STATUS =
+  | "CREATED"
+  | "ORDER_CONFIRMED"
+  | "PAYMENT_PENDING"
+  | "COMPLETED"
+  | "ORDER_CANCELLED"
+  | "PAYMENT_FAILED";
 
 export type User_Registration_Payload = {
     name: string;
@@ -56,37 +62,26 @@ export type Menu_Item = {
     isActive: boolean;
     servingQuantity: number;
     servingUnit: SERVING_UNIT;
-    isAvailable: boolean;
-    isInOffer: boolean;
-    offerPrice: number;
-    offerStartDate: string;
-    offerEndDate: string;
-    isHalfAvailable: boolean;
+    // isAvailable: boolean;
+    // isInOffer: boolean;
+    // offerPrice: number;
+    // offerStartDate: string;
+    // offerEndDate: string;
     status: "ACTIVE";
     createdAt: string;
     updatedAt: string;
+    variants?: {
+        id: string;
+        name: string; // half, full
+        price: number;
+        isAvailable: boolean;
+        isInOffer?: boolean;
+        offerPrice?: number;
+        offerStartDate?: string;
+        offerEndDate?: string;
+    }[];
 }
 
-
-export type Wallet = {
-    id: string;
-    userId: string;
-    balance: number;
-    status: "ACTIVE" | "INACTIVE";
-    createdAt: string;
-    updatedAt: string;
-    isActive: boolean;
-}
-
-export type Wallet_Transaction = {
-    id: string;
-    walletId: string;
-    amount: number;
-    type: "DEBIT" | "CREDIT";
-    description: string;
-    createdAt: string;
-    updatedAt: string;
-}
 
 export type User_Meta_Data = {
     id: string;
@@ -106,8 +101,8 @@ export type Address = {
     longitude: number;
     state: string;
     country: "India"
-    refrenceId: string;
-    refrenceType: "USER" | "SHOP";
+    referenceId : string
+    referenceType  : "USER" | "SHOP";
     googleMapLocation?: string;
     createdAt: string;
     updatedAt: string;
@@ -130,7 +125,7 @@ export type Compelete_User_Data = {
     status: "ACTIVE" | "INACTIVE";
     createdAt: string;
     updatedAt: string;
-    walletID: string
+    coins: number;
     //seo purpose data 
     dob: string;
     gender: GENDER;
@@ -156,10 +151,11 @@ export type Table = {
     floorId: string;
     tableNumber: number;
     totalSeats: number;
-    isOccoupied: boolean;
+    isOccupied : boolean;
     createdAt: string;
     updatedAt: string;
     tableQR: string;
+    currentOrderId?: string;
 }
 
 export type Compelete_Shop_Data = {
@@ -175,6 +171,10 @@ export type Compelete_Shop_Data = {
     //owner data
     ownerId: string; //from user table
     likesCount: number
+    isActive: boolean;
+    isVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export type Order_Menu_Item = {
@@ -184,6 +184,7 @@ export type Order_Menu_Item = {
     quantity: number;
     unit: SERVING_UNIT;
     totalPrice: number;
+    menuItemId: string;
 }
 
 export type Order_Create_Payload = {
@@ -194,6 +195,7 @@ export type Order_Create_Payload = {
     orderDate: string;
     orderStatus: ORDER_STATUS;
     orderItems: Order_Menu_Item[];
+    totalAmount: number;
 }
 
 export type Active_Orders = {
@@ -223,14 +225,66 @@ export type Order_Log = {
     createdAt: string;
     updatedAt: string;
     note: string
+    paymentId?: string;
+    razorpayOrderId?: string;
+    paymentStatus: "PENDING" | "SUCCESS" | "FAILED";
+    paymentMethod?: "UPI" | "CARD" | "NETBANKING";
+    paidAmount: number;
+}
+
+export type Reaction = {
+    id: string;
+    userId: string;
+    targetId: string; // postId / recipeId
+    targetType: "FEED" | "RECIPE";
+    reactionType: "LIKE" | "DISLIKE";
+    createdAt: string;
 }
 
 export type Feed_Post = {
-    id: string
-    title: string
-    description: string
-    medias: Media_Item[]
-
+    id: string;
+    authorId: string;
+    authorType: "OWNER" | "ADMIN";
+    shopId?: string;
+    title: string;
+    description: string;
+    medias: Media_Item[];
+    likeCount: number;
+    dislikeCount: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 
+//anyone can post recipe for their use
+export type Recipe = {
+    id: string;
+    userId: string;
+    title: string;
+    description: string;
+    ingredients: string[];
+    steps: string[];
+    medias: Media_Item[];
+    likeCount: number;
+    dislikeCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type Coin_Transaction = {
+    id: string;
+    userId: string;
+
+    type: "CREDIT" | "DEBIT";
+
+    amount: number;
+
+    source:
+      | "ORDER_REWARD"
+      | "REDEEM"
+      | "ADMIN_ADJUST";
+
+    referenceId?: string; // orderId etc
+
+    createdAt: string;
+}

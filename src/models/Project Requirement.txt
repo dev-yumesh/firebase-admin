@@ -1,0 +1,10 @@
+Project Requirement : - 
+
+Business Idea : 
+
+Face 1 
+
+1 I want to create an app using that user can scan the Restaurant/Stall food menu to place order from app
+  (there is currently No any payment system in app)
+2 By scanning from our app and ordering the food user will get the rewards (coins) and after an certain points the can order the food using that reward points.
+3 
