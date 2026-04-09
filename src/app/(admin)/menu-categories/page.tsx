@@ -8,7 +8,7 @@ import Button from '@/components/ui/button/Button'
 import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
 import { Pencil as EditIcon } from 'lucide-react'
-import { storage, ID } from '@/lib/appwriteServices'
+import { storage, ID } from '@/lib/firebaseMediaClient'
 import { env } from '@/config/env.config'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import {
@@ -120,15 +120,12 @@ const Page = () => {
         modalMode === "edit" ? selectedCategory?.logo : undefined
 
       if (data.imageFile) {
-        const file = await storage.createFile({
-         bucketId:  env.APPWRITE_STORAGE_BUCKET_ID,
-         fileId: ID.unique(),
-         file: data.imageFile,
-        })
-
-
-        const fileId = (file as any).$id || (file as any).id
-        logoUrl = `${env.APPWRITE_ENDPOINT}/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${fileId}/view?project=${env.APPWRITE_PROJECT_ID}`
+        const uploaded = await storage.createFile({
+          bucketId: env.FIREBASE_STORAGE_MEDIA_FOLDER,
+          fileId: ID.unique(),
+          file: data.imageFile,
+        });
+        logoUrl = uploaded.url;
       }
 
       const payload = {

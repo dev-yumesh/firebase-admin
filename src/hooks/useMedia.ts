@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useState } from "react";
-import { storage, ID } from "@/lib/appwriteServices";
+import { storage, ID } from "@/lib/firebaseMediaClient";
 import { env } from "@/config/env.config";
 
 type UploadMediaOptions = {
+  /** Storage path prefix (folder); defaults to `FIREBASE_STORAGE_MEDIA_FOLDER`. */
   bucketId?: string;
   fileId?: string;
 };
@@ -12,9 +13,6 @@ type UploadMediaResult = {
   fileId: string;
   url: string;
 };
-
-const buildAppwriteFileUrl = (bucketId: string, fileId: string) =>
-  `${env.APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/view?project=${env.APPWRITE_PROJECT_ID}`;
 
 export const useMedia = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -26,19 +24,16 @@ export const useMedia = () => {
       setError(null);
 
       try {
-        const bucketId = options?.bucketId ?? env.APPWRITE_STORAGE_BUCKET_ID;
+        const folder = options?.bucketId ?? env.FIREBASE_STORAGE_MEDIA_FOLDER;
         const desiredFileId = options?.fileId ?? ID.unique();
         const uploaded = await storage.createFile({
-          bucketId,
+          bucketId: folder,
           fileId: desiredFileId,
           file,
         });
 
-        const fileId =
-          (uploaded as any).$id ||
-          (uploaded as any).id ||
-          desiredFileId;
-        const url = buildAppwriteFileUrl(bucketId, fileId);
+        const fileId = uploaded.$id || uploaded.id || desiredFileId;
+        const url = uploaded.url;
 
         return { fileId, url };
       } catch (err: any) {

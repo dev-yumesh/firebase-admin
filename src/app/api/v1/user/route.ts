@@ -12,7 +12,8 @@ import { env } from "@/config/env.config";
 import { APP_LANGUAGE, USER_ROLES } from "@/constants/enums";
 import QRCode from "qrcode";
 import { constructQRURL } from "@/utils";
-import { storage, ID } from "@/lib/appwriteServices";
+import { uploadBufferWithReadUrl } from "@/lib/firebaseAdminStorage";
+import { ID } from "@/lib/storageId";
 
 const FB_USER_COLLECTION = env.FIREBASE_USER_COLLECTION_ID;
 const FB_SHOP_COLLECTION = env.FIREBASE_SHOP_COLLECTION_ID;
@@ -130,19 +131,13 @@ export async function POST(req: NextRequest) {
       const base64Data = shopQRBase64.replace(/^data:image\/png;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
 
-      const uploadedFile = await storage.createFile(
-        env.APPWRITE_STORAGE_BUCKET_ID,
-        ID.unique(),
-        new File(
-          [buffer],
-          `qr_${shopValidationResult.shopName.replace(/\s+/g, "_")}_${Date.now()}.png`,
-          {
-            type: "image/png",
-          }
-        )
+      const qrFileName = `qr_${shopValidationResult.shopName.replace(/\s+/g, "_")}_${Date.now()}.png`;
+      const qrPath = `shop-qrs/${savedShopRef.id}/${ID.unique()}_${qrFileName}`;
+      const qrImageURL = await uploadBufferWithReadUrl(
+        buffer,
+        qrPath,
+        "image/png"
       );
-
-      const qrImageURL = `${env.APPWRITE_ENDPOINT}/storage/buckets/${env.APPWRITE_STORAGE_BUCKET_ID}/files/${uploadedFile.$id}/view?project=${env.APPWRITE_PROJECT_ID}`;
 
       // Update shop with QR
       await db.collection(FB_SHOP_COLLECTION).doc(savedShopRef.id).update({

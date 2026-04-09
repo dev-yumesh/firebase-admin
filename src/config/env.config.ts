@@ -1,3 +1,11 @@
+function resolveFirebaseStorageBucket(): string {
+  const explicit = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+  if (explicit) return explicit;
+  const gs = process.env.NEXT_PUBLIC_FIREBASE_BUCKET_URL?.trim() ?? "";
+  if (gs.startsWith("gs://")) return gs.slice(5);
+  return "";
+}
+
 export const env = {
   WEB_BASE_URL: process.env.NEXT_PUBLIC_WEB_BASE_URL!,
   API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL!,
@@ -5,15 +13,17 @@ export const env = {
   FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
   FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
   FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-  FIREBASE_CLIENT_EMAIL : process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL!,
-  FIREBASE_PRIVATE_KEY : process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY!,
-  //For media storage related
-  APPWRITE_PROJECT_NAME: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_NAME!,
-  APPWRITE_PROJECT_ID: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!,
-  APPWRITE_DATABASE_ID: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-  APPWRITE_STORAGE_BUCKET_ID:
-    process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-  APPWRITE_ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!,
+  FIREBASE_CLIENT_EMAIL: process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL!,
+  FIREBASE_PRIVATE_KEY: process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY!,
+  FIREBASE_AUTH_DOMAIN:
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim() ||
+    `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  /** GCS bucket name (e.g. from gs://… in Firebase console). */
+  FIREBASE_STORAGE_BUCKET: resolveFirebaseStorageBucket(),
+  /** Path prefix for browser uploads (  “bucket id” folder). */
+  FIREBASE_STORAGE_MEDIA_FOLDER:
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_MEDIA_FOLDER?.trim() ||
+    "media",
 
   //firebase tables
   FIREBASE_USER_COLLECTION_ID: process.env.NEXT_PUBLIC_USERS_COLLECTION_NAME!,
