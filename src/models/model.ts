@@ -62,24 +62,14 @@ export type Menu_Item = {
     isActive: boolean;
     servingQuantity: number;
     servingUnit: SERVING_UNIT;
-    // isAvailable: boolean;
-    // isInOffer: boolean;
-    // offerPrice: number;
-    // offerStartDate: string;
-    // offerEndDate: string;
+    isAvailable: boolean;
+    isInOffer: boolean;
+    offerPrice: number;
+    offerStartDate: string;
+    offerEndDate: string;
     status: "ACTIVE";
     createdAt: string;
     updatedAt: string;
-    variants?: {
-        id: string;
-        name: string; // half, full
-        price: number;
-        isAvailable: boolean;
-        isInOffer?: boolean;
-        offerPrice?: number;
-        offerStartDate?: string;
-        offerEndDate?: string;
-    }[];
 }
 
 
