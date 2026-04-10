@@ -3,6 +3,7 @@ const AUTH_BASE = "/api/v1/auth";
 export const API_ENDPOINTS = {
   auth: {
     login: `${AUTH_BASE}/login`,
+    profile: `${AUTH_BASE}/profile`,
   },
   users: {
     list: AUTH_BASE,

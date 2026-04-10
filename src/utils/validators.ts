@@ -316,6 +316,90 @@ export const shopUpdateSchema = yup.object({
   address: yup.mixed().notRequired(),
 });
 
+const nullableHttpUrl = yup
+  .string()
+  .transform((_, originalValue) => {
+    if (originalValue === null || originalValue === undefined) return null;
+    const s = trimString(originalValue) as string;
+    return s === "" ? null : s;
+  })
+  .nullable()
+  .notRequired()
+  .test(
+    "url-if-set",
+    "must be a valid http(s) URL",
+    (value) => !value || /^https?:\/\//i.test(value),
+  );
+
+/** Owner-only shop fields (aligned with Compelete_Shop_Data subset). */
+export const ownerShopSelfUpdateSchema = yup.object({
+  shopName: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired()
+    .min(1, "shopName cannot be empty"),
+  shopType: yup
+    .string()
+    .transform((_, originalValue) => trimUpperString(originalValue))
+    .notRequired()
+    .oneOf(SHOP_TYPES, "shopType must be one of STALL, RESTAURANT"),
+  hasSeating: yup.boolean().notRequired(),
+  totalFloors: yup
+    .number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue === null || originalValue === undefined
+        ? undefined
+        : value,
+    )
+    .typeError("totalFloors must be a number")
+    .min(0, "totalFloors cannot be negative")
+    .notRequired(),
+  logoURL: nullableHttpUrl,
+  bannerImageURL: nullableHttpUrl,
+});
+
+/** Logged-in user PATCH: optional user fields + optional owner shop block. */
+export const profilePatchBodySchema = yup
+  .object({
+    name: yup
+      .string()
+      .transform((_, originalValue) => trimString(originalValue))
+      .notRequired()
+      .min(2, "name must be at least 2 characters"),
+    language: yup
+      .string()
+      .transform((_, originalValue) => trimString(originalValue))
+      .notRequired()
+      .oneOf(["en", "hi"], "language must be en or hi"),
+    profilePictureURL: nullableHttpUrl,
+    shop: ownerShopSelfUpdateSchema.optional(),
+  })
+  .test(
+    "at-least-one",
+    "Provide at least one field to update (user or shop)",
+    (value) => {
+      if (!value) return false;
+      const userPart = removeUndefinedFields({
+        name: value.name,
+        language: value.language,
+        profilePictureURL: value.profilePictureURL,
+      } as Record<string, unknown>);
+      const hasUser = Object.keys(userPart).length > 0;
+      const shop = value.shop;
+      if (shop === undefined) return hasUser;
+      const shopPart = removeUndefinedFields({
+        shopName: shop.shopName,
+        shopType: shop.shopType,
+        hasSeating: shop.hasSeating,
+        totalFloors: shop.totalFloors,
+        logoURL: shop.logoURL,
+        bannerImageURL: shop.bannerImageURL,
+      } as Record<string, unknown>);
+      const hasShop = Object.keys(shopPart).length > 0;
+      return hasUser || hasShop;
+    },
+  );
+
 export const userUpdateSchema = yup.object({
   name: yup
     .string()

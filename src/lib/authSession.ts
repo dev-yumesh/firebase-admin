@@ -48,3 +48,22 @@ export function clearAuthSession(): void {
   localStorage.removeItem(AUTH_SESSION_KEY);
   sessionStorage.removeItem(AUTH_SESSION_KEY);
 }
+
+/** Merge fields into the stored session user (same storage as login). */
+export function updateAuthSessionUser(partial: Partial<AuthSessionUser>): void {
+  if (typeof window === "undefined") return;
+  const fromLocal = localStorage.getItem(AUTH_SESSION_KEY);
+  const fromSession = sessionStorage.getItem(AUTH_SESSION_KEY);
+  const persistent = Boolean(fromLocal);
+  const raw = fromLocal || fromSession;
+  if (!raw) return;
+  try {
+    const session = JSON.parse(raw) as AuthSessionPayload;
+    saveAuthSession(
+      { ...session, user: { ...session.user, ...partial } },
+      persistent,
+    );
+  } catch {
+    /* ignore */
+  }
+}

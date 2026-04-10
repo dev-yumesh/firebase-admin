@@ -2,11 +2,12 @@
 
 import { PanelBaseProvider, type PanelRole } from "@/context/PanelBaseContext";
 import { useSidebar } from "@/context/SidebarContext";
+import { readAuthSession } from "@/lib/authSession";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
 import { usePathname } from "next/navigation";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 function resolvePanelContext(pathname: string): {
   basePath: string;
@@ -14,6 +15,12 @@ function resolvePanelContext(pathname: string): {
 } {
   if (pathname.startsWith("/superadmin")) {
     return { basePath: "/superadmin", role: "superadmin" };
+  }
+  if (pathname === "/profile" || pathname.startsWith("/profile/")) {
+    const role = readAuthSession()?.user?.role?.toUpperCase() ?? "";
+    if (role === "SUPERADMIN" || role === "ADMIN") {
+      return { basePath: "/superadmin", role: "superadmin" };
+    }
   }
   return { basePath: "/admin", role: "admin" };
 }
@@ -24,7 +31,13 @@ export default function PanelLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { basePath, role } = resolvePanelContext(pathname);
+  const [panelCtx, setPanelCtx] = useState(() => resolvePanelContext(pathname));
+
+  useEffect(() => {
+    setPanelCtx(resolvePanelContext(pathname));
+  }, [pathname]);
+
+  const { basePath, role } = panelCtx;
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 
   const mainContentMargin = isMobileOpen
