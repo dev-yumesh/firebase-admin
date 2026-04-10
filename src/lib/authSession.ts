@@ -1,5 +1,12 @@
 export const AUTH_SESSION_KEY = "menu_mitra_admin_session";
 
+export const AUTH_SESSION_UPDATED_EVENT = "menu_mitra_session_updated";
+
+function notifySessionListeners(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(AUTH_SESSION_UPDATED_EVENT));
+}
+
 export type AuthSessionUser = {
   uid: string;
   email: string;
@@ -47,6 +54,7 @@ export function clearAuthSession(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(AUTH_SESSION_KEY);
   sessionStorage.removeItem(AUTH_SESSION_KEY);
+  notifySessionListeners();
 }
 
 /** Merge fields into the stored session user (same storage as login). */

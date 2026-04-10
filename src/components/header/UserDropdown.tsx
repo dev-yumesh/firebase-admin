@@ -1,40 +1,155 @@
 "use client";
+
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import {
+  AUTH_SESSION_UPDATED_EVENT,
+  clearAuthSession,
+  readAuthSession,
+} from "@/lib/authSession";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useCallback, useEffect, useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
-export default function UserDropdown() {
-  const [isOpen, setIsOpen] = useState(false);
+const FALLBACK_AVATAR = "/images/user/owner.jpg";
 
-function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-  e.stopPropagation();
-  setIsOpen((prev) => !prev);
+type HeaderUser = {
+  displayName: string;
+  fullName: string;
+  email: string;
+  avatarUrl: string;
+};
+
+function fromSession(): HeaderUser | null {
+  const s = readAuthSession();
+  if (!s?.user) return null;
+  const email = (s.user.email || "").trim();
+  const name = (s.user.name || "").trim();
+  const displayName =
+    name.split(/\s+/)[0] ||
+    (email ? email.split("@")[0] : "") ||
+    "Account";
+  const fullName = name || displayName;
+  return {
+    displayName,
+    fullName,
+    email,
+    avatarUrl: FALLBACK_AVATAR,
+  };
 }
+
+export default function UserDropdown() {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<HeaderUser | null>(null);
+
+  const syncFromSession = useCallback(() => {
+    setUser(fromSession());
+  }, []);
+
+  useEffect(() => {
+    syncFromSession();
+    const onSession = () => syncFromSession();
+    window.addEventListener(AUTH_SESSION_UPDATED_EVENT, onSession);
+    window.addEventListener("storage", onSession);
+    return () => {
+      window.removeEventListener(AUTH_SESSION_UPDATED_EVENT, onSession);
+      window.removeEventListener("storage", onSession);
+    };
+  }, [syncFromSession]);
+
+  const refreshProfileFromApi = useCallback(async () => {
+    const s = readAuthSession();
+    if (!s?.idToken) return;
+    try {
+      const res = await fetch(API_ENDPOINTS.auth.profile, {
+        headers: {
+          Authorization: `Bearer ${s.idToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const json = (await res.json()) as {
+        success?: boolean;
+        data?: {
+          name?: string;
+          email?: string;
+          profilePictureURL?: string | null;
+        };
+      };
+      if (!res.ok || !json.success || !json.data) return;
+      const d = json.data;
+      const email = (d.email || s.user.email || "").trim();
+      const name = (d.name || "").trim();
+      const displayName =
+        name.split(/\s+/)[0] ||
+        (email ? email.split("@")[0] : "") ||
+        "Account";
+      const fullName = name || displayName;
+      const pic =
+        typeof d.profilePictureURL === "string" && d.profilePictureURL.trim()
+          ? d.profilePictureURL.trim()
+          : null;
+      setUser({
+        displayName,
+        fullName,
+        email,
+        avatarUrl: pic || FALLBACK_AVATAR,
+      });
+    } catch {
+      /* keep session-derived user */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) void refreshProfileFromApi();
+  }, [isOpen, refreshProfileFromApi]);
+
+  function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    e.stopPropagation();
+    setIsOpen((prev) => !prev);
+  }
 
   function closeDropdown() {
     setIsOpen(false);
   }
+
+  function signOut() {
+    clearAuthSession();
+    closeDropdown();
+    router.push("/signin");
+  }
+
+  const displayName = user?.displayName ?? "Account";
+  const fullName = user?.fullName ?? displayName;
+  const email = user?.email ?? "";
+  const avatarUrl = user?.avatarUrl ?? FALLBACK_AVATAR;
+  const avatarIsRemote = avatarUrl.startsWith("http");
+
   return (
     <div className="relative">
       <button
-        onClick={toggleDropdown} 
-        className="flex items-center text-gray-700 dark:text-gray-400 dropdown-toggle"
+        onClick={toggleDropdown}
+        className="dropdown-toggle flex items-center text-gray-700 dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
+        <span className="mr-3 h-11 w-11 overflow-hidden rounded-full">
           <Image
             width={44}
             height={44}
-            src="/images/user/owner.jpg"
-            alt="User"
+            src={avatarUrl}
+            alt={displayName}
+            className="h-11 w-11 object-cover"
+            unoptimized={avatarIsRemote}
           />
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">Musharof</span>
+        <span className="text-theme-sm mr-1 block max-w-[120px] truncate font-medium">
+          {displayName}
+        </span>
 
         <svg
-          className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
+          className={`stroke-gray-500 transition-transform duration-200 dark:stroke-gray-400 ${
             isOpen ? "rotate-180" : ""
           }`}
           width="18"
@@ -59,21 +174,21 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         className="absolute right-0 mt-[17px] flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
       >
         <div>
-          <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Musharof Chowdhury
+          <span className="text-theme-sm block font-medium text-gray-700 dark:text-gray-400">
+            {fullName}
           </span>
-          <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            randomuser@pimjo.com
+          <span className="text-theme-xs mt-0.5 block truncate text-gray-500 dark:text-gray-400">
+            {email || "—"}
           </span>
         </div>
 
-        <ul className="flex flex-col gap-1 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
+        <ul className="flex flex-col gap-1 border-b border-gray-200 pt-4 pb-3 dark:border-gray-800">
           <li>
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+              className="group flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg
                 className="fill-gray-500 group-hover:fill-gray-700 dark:fill-gray-400 dark:group-hover:fill-gray-300"
@@ -98,7 +213,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
               onItemClick={closeDropdown}
               tag="a"
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+              className="group flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg
                 className="fill-gray-500 group-hover:fill-gray-700 dark:fill-gray-400 dark:group-hover:fill-gray-300"
@@ -123,7 +238,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
               onItemClick={closeDropdown}
               tag="a"
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+              className="group flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg
                 className="fill-gray-500 group-hover:fill-gray-700 dark:fill-gray-400 dark:group-hover:fill-gray-300"
@@ -144,9 +259,10 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
             </DropdownItem>
           </li>
         </ul>
-        <Link
-          href="/signin"
-          className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+        <button
+          type="button"
+          onClick={signOut}
+          className="group mt-3 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-theme-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg
             className="fill-gray-500 group-hover:fill-gray-700 dark:group-hover:fill-gray-300"
@@ -164,7 +280,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
             />
           </svg>
           Sign out
-        </Link>
+        </button>
       </Dropdown>
     </div>
   );
