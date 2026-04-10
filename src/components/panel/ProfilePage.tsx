@@ -336,7 +336,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageBreadcrumb pageTitle="My profile" />
       <div className="mb-4">
         <Link

@@ -193,7 +193,7 @@ export default function ShopsListPage() {
   );
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageBreadcrumb pageTitle="Shops" />
       <div className="space-y-6">
         <ComponentCard title="Shops">

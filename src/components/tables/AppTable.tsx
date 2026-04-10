@@ -102,18 +102,53 @@ export default function AppTable<T extends { id: number | string }>({
           </TableHeader>
 
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {paginatedData.map((row) => (
-              <TableRow key={row.id}>
-                {columns.map((col, index) => (
-                  <TableCell
-                    key={index}
-                    className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
-                  >
-                    {col.render ? col.render(row) : (row as any)[col.accessor]}
-                  </TableCell>
-                ))}
+            {paginatedData.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="px-4 py-10 text-center text-theme-sm text-gray-500 dark:text-gray-400"
+                >
+                  No records found.
+                </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              paginatedData.map((row) => (
+                <TableRow key={row.id}>
+                  {columns.map((col, index) => (
+                    <TableCell
+                      key={index}
+                      className="px-4 py-3 text-start text-theme-sm text-gray-500 dark:text-gray-400"
+                    >
+                      {col.render
+                        ? col.render(row)
+                        : (() => {
+                            const v = (row as Record<string, unknown>)[
+                              col.accessor as string
+                            ];
+                            if (
+                              v === null ||
+                              v === undefined ||
+                              typeof v === "boolean"
+                            ) {
+                              return v === true
+                                ? "Yes"
+                                : v === false
+                                  ? "No"
+                                  : "—";
+                            }
+                            if (
+                              typeof v === "string" ||
+                              typeof v === "number"
+                            ) {
+                              return v;
+                            }
+                            return String(v);
+                          })()}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

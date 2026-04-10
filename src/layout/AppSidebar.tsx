@@ -6,13 +6,21 @@ import { usePathname } from "next/navigation";
 import { usePanelBase } from "@/context/PanelBaseContext";
 import { useSidebar } from "../context/SidebarContext";
 import {
+  BookOpen,
   ChevronDown as ChevronDownIcon,
+  ClipboardList,
+  Coins,
+  History,
   LayoutGrid as GridIcon,
   MoreHorizontal as HorizontaLDots,
+  Newspaper,
   Plug as PlugInIcon,
-  ShoppingBagIcon,
   Settings as SettingsIcon,
+  ShoppingBagIcon,
+  Table2,
+  Tags,
   UserIcon,
+  UtensilsCrossed,
 } from "lucide-react";
 import SidebarWidget from "./SidebarWidget";
 
@@ -35,34 +43,89 @@ const AppSidebar: React.FC = () => {
       name: "Dashboard",
       path: `${b}/dashboard`,
     };
-    const menuCategories: NavItem = {
-      icon: <GridIcon />,
-      name: "Menu Categories",
-      path: `${b}/menu-categories`,
-    };
     const shops: NavItem = {
       icon: <ShoppingBagIcon />,
       name: "Shops",
       path: `${b}/shops`,
     };
+    const menuCategories: NavItem = {
+      icon: <Tags className="h-5 w-5" />,
+      name: "Menu categories",
+      path: `${b}/menu-categories`,
+    };
+    const menuItems: NavItem = {
+      icon: <UtensilsCrossed className="h-5 w-5" />,
+      name: "Menu items",
+      path: `${b}/menu-items`,
+    };
+    const orders: NavItem = {
+      icon: <ClipboardList className="h-5 w-5" />,
+      name: "Orders",
+      path: `${b}/orders`,
+    };
+    const orderHistory: NavItem = {
+      icon: <History className="h-5 w-5" />,
+      name: "Order history",
+      path: `${b}/order-history`,
+    };
+    const feedPosts: NavItem = {
+      icon: <Newspaper className="h-5 w-5" />,
+      name: "Feed posts",
+      path: `${b}/feed-posts`,
+    };
+    const recipes: NavItem = {
+      icon: <BookOpen className="h-5 w-5" />,
+      name: "Recipes",
+      path: `${b}/recipes`,
+    };
+    const coinTransactions: NavItem = {
+      icon: <Coins className="h-5 w-5" />,
+      name: "Coin transactions",
+      path: `${b}/coin-transactions`,
+    };
+    const tables: NavItem = {
+      icon: <Table2 className="h-5 w-5" />,
+      name: "Tables",
+      path: `${b}/tables`,
+    };
+
     if (role === "superadmin") {
       return [
         dashboard,
-        menuCategories,
         {
           icon: <UserIcon />,
           name: "Users",
           path: `${b}/users`,
         },
         shops,
+        tables,
+        menuCategories,
+        menuItems,
+        orders,
+        orderHistory,
+        feedPosts,
+        recipes,
+        coinTransactions,
         {
           icon: <SettingsIcon />,
-          name: "App Settings",
+          name: "App settings",
           path: `${b}/app-settings`,
         },
       ];
     }
-    return [dashboard, menuCategories, shops];
+
+    return [
+      dashboard,
+      shops,
+      menuCategories,
+      menuItems,
+      tables,
+      orders,
+      orderHistory,
+      feedPosts,
+      recipes,
+      coinTransactions,
+    ];
   }, [basePath, role]);
 
   const othersItems = useMemo(

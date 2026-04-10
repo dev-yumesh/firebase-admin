@@ -170,7 +170,7 @@ const Page = () => {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Basic Table" />
+      <PageBreadcrumb pageTitle="Menu categories" />
       <div className="space-y-6">
         <ComponentCard title="Menu Categories"  >
           <div className='mb-4 flex items-center justify-between gap-4'>

@@ -42,8 +42,8 @@ export default function ShopDetailPage() {
   }, [id, dispatch]);
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle="Shop Details" />
+    <div className="space-y-6">
+      <PageBreadcrumb pageTitle="Shop details" />
       <div className="mb-4">
         <Link
           href={`${basePath}/shops`}

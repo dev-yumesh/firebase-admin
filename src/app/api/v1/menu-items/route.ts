@@ -5,13 +5,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 const COLLECTION = env.FIREBASE_MENU_ITEMS_COLLECTION_ID;
 
+const SERVING_UNITS = new Set([
+    "piece",
+    "slice",
+    "plate",
+    "gram",
+    "kilogram",
+    "other",
+]);
+
 type MenuItemMedia = {
     url: string;
     isPrimary: boolean;
     type: "video" | "image";
 };
 
-/** Align request body with recipe_book MenuItem / MenuItemFormInput. */
+/** Align with Menu_Item (model) + legacy quantity fields. */
 const normalizeCreateBody = (body: Record<string, unknown>) => {
     const num = (v: unknown, fallback = 0) =>
         typeof v === "number" && !Number.isNaN(v) ? v : fallback;
@@ -49,19 +58,34 @@ const normalizeCreateBody = (body: Record<string, unknown>) => {
         medias = [{ url: legacyPhoto, isPrimary: true, type: "image" }];
     }
 
+    const servingQtyRaw =
+        body.servingQuantity !== undefined && body.servingQuantity !== null
+            ? body.servingQuantity
+            : body.quantity;
+    const servingQuantity = num(servingQtyRaw, 1);
+
+    const unitRaw = String(
+        body.servingUnit ?? body.quantityUnit ?? body.unit ?? "piece",
+    )
+        .trim()
+        .toLowerCase();
+    const servingUnit = SERVING_UNITS.has(unitRaw) ? unitRaw : "piece";
+
     return removeUndefinedFields({
         name: String(body.name ?? "").trim(),
         description: String(body.description ?? "").trim(),
         categoryIds,
         price: num(body.price, 0),
         medias,
+        servingQuantity,
+        servingUnit,
         isInOffer: Boolean(body.isInOffer),
         offerPrice: num(body.offerPrice, 0),
         offerStartDate: asDateStr(body.offerStartDate),
         offerEndDate: asDateStr(body.offerEndDate),
         isHalfAvailable: Boolean(body.isHalfAvailable),
-        quantity: num(body.quantity, 0),
-        quantityUnit: String(body.quantityUnit ?? body.unit ?? "").trim(),
+        quantity: servingQuantity,
+        quantityUnit: servingUnit,
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
         isAvailable: body.isAvailable !== undefined ? Boolean(body.isAvailable) : true,
         shopId: String(body.shopId ?? "").trim(),
@@ -106,6 +130,30 @@ export async function POST(req: NextRequest) {
                 { success: false, error: "categoryIds is required" },
                 { status: 400 },
             );
+        }
+
+        if (normalized.categoryIds.length > 1) {
+            const catCol = env.FIREBASE_MENU_CATEGORIES_COLLECTION_ID;
+            const snaps = await Promise.all(
+                normalized.categoryIds.map((id) =>
+                    db.collection(catCol).doc(id).get(),
+                ),
+            );
+            const hasSingleOnly = snaps.some((snap) => {
+                if (!snap.exists) return false;
+                const d = snap.data() as { isMultiSelectable?: boolean };
+                return d?.isMultiSelectable === false;
+            });
+            if (hasSingleOnly) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error:
+                            "A category that does not allow multiple selection cannot be combined with other categories.",
+                    },
+                    { status: 400 },
+                );
+            }
         }
 
         const newItem = {

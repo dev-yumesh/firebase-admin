@@ -41,8 +41,8 @@ export default function UserDetailPage() {
   }, [id, dispatch]);
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle="User Details" />
+    <div className="space-y-6">
+      <PageBreadcrumb pageTitle="User details" />
       <div className="mb-4">
         <Link
           href={`${basePath}/users`}

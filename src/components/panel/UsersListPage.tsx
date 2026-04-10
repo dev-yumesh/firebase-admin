@@ -175,7 +175,7 @@ export default function UsersListPage() {
   );
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageBreadcrumb pageTitle="Users" />
       <div className="space-y-6">
         <ComponentCard title="Users">
