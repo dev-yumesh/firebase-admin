@@ -1,7 +1,14 @@
+const AUTH_BASE = "/api/v1/auth";
+
 export const API_ENDPOINTS = {
+  auth: {
+    login: `${AUTH_BASE}/login`,
+  },
   users: {
-    list: "/api/v1/user",
-    detail: (id: string | number) => `/api/v1/user?id=${encodeURIComponent(String(id))}`,
+    list: AUTH_BASE,
+    detail: (id: string | number) =>
+      `${AUTH_BASE}?id=${encodeURIComponent(String(id))}`,
+    shopOwnerRegister: `${AUTH_BASE}/register`,
   },
   shops: {
     list: "/api/v1/shop",

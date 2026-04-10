@@ -1246,3 +1246,46 @@ span.flatpickr-weekday,
     flex-direction: column;
   }
 }
+
+/* Signup / auth micro-interactions */
+@keyframes signup-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  30% {
+    transform: translateX(6px);
+  }
+  45% {
+    transform: translateX(-4px);
+  }
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+.signup-error-shake {
+  animation: signup-shake 0.45s ease-in-out;
+}
+
+@keyframes signup-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+.signup-float-slow {
+  animation: signup-float 7s ease-in-out infinite;
+}
+
+.signup-float-delayed {
+  animation: signup-float 9s ease-in-out infinite;
+  animation-delay: -2s;
+}

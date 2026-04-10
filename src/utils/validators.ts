@@ -92,6 +92,18 @@ const userAddressSchema = yup
   .typeError(typeErrorMessages.userAddress)
   .notRequired();
 
+export const loginSchema = yup.object({
+  email: yup
+    .string()
+    .transform((_, originalValue) => trimLowerString(originalValue))
+    .required("email is required")
+    .email("email is invalid"),
+  password: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .required("password is required"),
+});
+
 export const userCreateSchema = yup.object({
   // id: yup.string().transform((_, originalValue) => trimString(originalValue)).notRequired(),
   name: yup
@@ -139,6 +151,48 @@ export const userCreateSchema = yup.object({
   // walletBalance: yup.number().notRequired().default(0),
 });
 
+/** Shop address payload for owner registration (matches Address fields set by API). */
+export const shopLocationRegistrationSchema = yup.object({
+  city: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .required("location.city is required"),
+  state: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .required("location.state is required"),
+  country: yup
+    .string()
+    .transform((_, originalValue) => {
+      const s = String(trimString(originalValue) ?? "").trim();
+      if (!s) return "India";
+      return s.toLowerCase() === "india" ? "India" : s;
+    })
+    .oneOf(["India"], "location.country must be India")
+    .default("India"),
+  pincode: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired(),
+  locality: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired(),
+  latitude: yup
+    .number()
+    .typeError("location.latitude must be a number")
+    .required("location.latitude is required"),
+  longitude: yup
+    .number()
+    .typeError("location.longitude must be a number")
+    .required("location.longitude is required"),
+  googleMapLocation: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .notRequired()
+    .url("location.googleMapLocation must be a valid URL"),
+});
+
 export const shopCreateSchema = yup.object({
   shopName: yup
     .string()
@@ -149,7 +203,7 @@ export const shopCreateSchema = yup.object({
     .string()
     .transform((_, originalValue) => trimUpperString(originalValue))
     .required("shopType is required")
-    .oneOf(SHOP_TYPES, "shopType must be one of RESTAURANT, SHOP, CAFE"),
+    .oneOf(SHOP_TYPES, "shopType must be one of STALL, RESTAURANT"),
 
   hasSeating: yup
     .boolean()
@@ -172,6 +226,40 @@ export const shopCreateSchema = yup.object({
     .transform((_, originalValue) => trimString(originalValue))
     .notRequired()
     .url("bannerImageURL must be a valid URL"),
+});
+
+/** Same as shop create with optional shop location (saved as shop.address). */
+export const shopCreateSchemaWithLocation = shopCreateSchema.shape({
+  location: shopLocationRegistrationSchema.optional(),
+});
+
+/** Owner signup: shop + required location. */
+export const shopOwnerShopRegistrationSchema = shopCreateSchema.shape({
+  location: shopLocationRegistrationSchema.required(
+    "shop location is required for registration",
+  ),
+});
+
+export const shopOwnerUserRegistrationSchema = yup.object({
+  name: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .required("name is required"),
+  email: yup
+    .string()
+    .transform((_, originalValue) => trimLowerString(originalValue))
+    .required("email is required")
+    .email("email is invalid"),
+  password: yup
+    .string()
+    .transform((_, originalValue) => trimString(originalValue))
+    .required("password is required")
+    .min(6, "password must be at least 6 characters"),
+});
+
+export const shopOwnerRegistrationSchema = yup.object({
+  userData: shopOwnerUserRegistrationSchema.required(),
+  shopData: shopOwnerShopRegistrationSchema.required(),
 });
 
 // Used for partial updates (PUT).
