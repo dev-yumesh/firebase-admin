@@ -66,6 +66,15 @@ export async function registerUserWithOptionalShop(
   shopValidationResult: ShopWithLocation | null,
   shopExtras?: { logoURL?: string | null; bannerImageURL?: string | null },
 ): Promise<RegistrationSuccessBody> {
+  if (userValidationResult.role === USER_ROLES.OWNER) {
+    if (!shopValidationResult?.location) {
+      throw Object.assign(
+        new Error("Owner registration requires shop data with location"),
+        { code: "OWNER_SHOP_REQUIRED", name: "ValidationError" },
+      );
+    }
+  }
+
   const createAuthPayload: Parameters<typeof auth.createUser>[0] = {
     email: userValidationResult.email,
     password: userValidationResult.password,
@@ -117,6 +126,8 @@ export async function registerUserWithOptionalShop(
       logoURL: shopExtras?.logoURL ?? null,
       bannerImageURL: shopExtras?.bannerImageURL ?? null,
       ownerUID: authUserResult.uid,
+      ownerId: savedUserRef.id,
+      likesCount: 0,
       shopQR: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

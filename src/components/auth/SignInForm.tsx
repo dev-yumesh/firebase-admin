@@ -20,6 +20,7 @@ export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "1";
+  const nextAfterLogin = searchParams.get("next");
 
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
@@ -75,17 +76,26 @@ export default function SignInForm() {
       const expiresInSec = Number.parseInt(expiresIn, 10) || 3600;
       const expiresAt = Date.now() + expiresInSec * 1000;
 
+      const safeNext =
+        nextAfterLogin &&
+        nextAfterLogin.startsWith("/") &&
+        !nextAfterLogin.startsWith("//")
+          ? nextAfterLogin
+          : null;
+
       saveAuthSession(
         {
           idToken,
           refreshToken,
           expiresAt,
           user,
+          redirectTo: safeNext ?? redirectTo,
+          lastProfileValidatedAt: Date.now(),
         },
         keepLoggedIn,
       );
 
-      router.push(redirectTo);
+      router.push(safeNext ?? redirectTo);
       router.refresh();
     } catch {
       setApiError("Network error. Please try again.");

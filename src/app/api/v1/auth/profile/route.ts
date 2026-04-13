@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  evaluateSessionAfterAuth,
+  sessionGateErrorMessage,
+} from "@/lib/accountSessionGate";
 import { auth, db, serverTimestamp } from "@/lib/firebaseAdmin";
 import { env } from "@/config/env.config";
 import {
@@ -78,6 +82,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Invalid or expired session" },
         { status: 401 },
+      );
+    }
+
+    const gate = await evaluateSessionAfterAuth(uid);
+    if (!gate.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: sessionGateErrorMessage(gate.code),
+          errorCode: gate.code,
+        },
+        { status: 403 },
       );
     }
 

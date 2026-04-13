@@ -122,6 +122,7 @@ export type Compelete_User_Data = {
     bloodGroup: BLOOD_GROUP;
     /** Address */
     address: Address;
+    uid:string; //firebase auth uid
 }
 
 

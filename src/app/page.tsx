@@ -1,6 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import {
+  defaultDashboardPathForRole,
+  validateAuthSessionWithBackend,
+} from "@/lib/authSession";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   ArrowRight,
@@ -15,7 +20,23 @@ import {
 } from "lucide-react";
 
 export default function HomeHeroPage() {
+  const router = useRouter();
+
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    let cancelled = false;
+
+    if ([...params].length === 0) {
+      void (async () => {
+        const session = await validateAuthSessionWithBackend({ force: true });
+        if (cancelled || !session) return;
+        const path =
+          session.redirectTo ??
+          defaultDashboardPathForRole(session.user.role);
+        router.replace(path);
+      })();
+    }
+
     const onScroll = () => {
       const nav = document.getElementById("navbar");
       if (!nav) return;
@@ -49,7 +70,6 @@ export default function HomeHeroPage() {
         observer.observe(el);
       });
 
-    const params = new URLSearchParams(window.location.search);
     if ([...params].length) {
       const appRedirectUrl = `recipebook://qr?${params.toString()}`;
       window.location.replace(appRedirectUrl);
@@ -60,10 +80,11 @@ export default function HomeHeroPage() {
     }
 
     return () => {
+      cancelled = true;
       window.removeEventListener("scroll", onScroll);
       observer.disconnect();
     };
-  }, []);
+  }, [router]);
 
   return (
     <div className="recipe-landing">

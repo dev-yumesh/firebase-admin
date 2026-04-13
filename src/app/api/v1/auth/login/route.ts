@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebaseAdmin";
 import { env } from "@/config/env.config";
+import {
+  dashboardPathForRole,
+  evaluateSessionAfterAuth,
+  sessionGateErrorMessage,
+} from "@/lib/accountSessionGate";
 import { loginSchema } from "@/utils/validators";
-
-const FB_USER_COLLECTION = env.FIREBASE_USER_COLLECTION_ID;
 
 const FIREBASE_SIGN_IN_URL =
   "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword";
@@ -22,17 +24,6 @@ function mapFirebaseAuthError(code: string | undefined): string {
     default:
       return "Sign in failed. Please try again.";
   }
-}
-
-function dashboardPathForRole(role: string | undefined): string {
-  const r = (role || "").toUpperCase();
-  if (r === "SUPERADMIN" || r === "ADMIN") {
-    return "/superadmin/dashboard";
-  }
-  if (r === "OWNER" || r === "MANAGER") {
-    return "/admin/dashboard";
-  }
-  return "/admin/dashboard";
 }
 
 export async function POST(req: NextRequest) {
@@ -85,24 +76,20 @@ export async function POST(req: NextRequest) {
     }
 
     const uid = idJson.localId;
-    let firestoreId: string | undefined;
-    let role: string | undefined;
-    let name: string | undefined;
+    const gate = await evaluateSessionAfterAuth(uid);
 
-    const snap = await db
-      .collection(FB_USER_COLLECTION)
-      .where("uid", "==", uid)
-      .limit(1)
-      .get();
-
-    if (!snap.empty) {
-      const doc = snap.docs[0]!;
-      firestoreId = doc.id;
-      const data = doc.data() as Record<string, unknown>;
-      role = typeof data.role === "string" ? data.role : undefined;
-      name = typeof data.name === "string" ? data.name : undefined;
+    if (!gate.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: sessionGateErrorMessage(gate.code),
+          errorCode: gate.code,
+        },
+        { status: 403 },
+      );
     }
 
+    const { firestoreId, role, name } = gate;
     const redirectTo = dashboardPathForRole(role);
 
     return NextResponse.json(

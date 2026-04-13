@@ -2,11 +2,16 @@
 
 import { PanelBaseProvider, type PanelRole } from "@/context/PanelBaseContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { readAuthSession } from "@/lib/authSession";
+import {
+  clearAuthSession,
+  isAuthSessionTokenValid,
+  readAuthSession,
+  validateAuthSessionWithBackend,
+} from "@/lib/authSession";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 function resolvePanelContext(pathname: string): {
@@ -31,11 +36,34 @@ export default function PanelLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [panelCtx, setPanelCtx] = useState(() => resolvePanelContext(pathname));
 
   useEffect(() => {
     setPanelCtx(resolvePanelContext(pathname));
   }, [pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const raw = readAuthSession();
+      if (!isAuthSessionTokenValid(raw)) {
+        if (raw) clearAuthSession();
+        const next = encodeURIComponent(pathname || "/admin/dashboard");
+        router.replace(`/signin?next=${next}`);
+        return;
+      }
+      const valid = await validateAuthSessionWithBackend();
+      if (cancelled) return;
+      if (!valid) {
+        const next = encodeURIComponent(pathname || "/admin/dashboard");
+        router.replace(`/signin?next=${next}`);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, router]);
 
   const { basePath, role } = panelCtx;
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();

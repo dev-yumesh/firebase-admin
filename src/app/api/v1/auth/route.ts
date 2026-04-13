@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, serverTimestamp } from "@/lib/firebaseAdmin";
 import {
-  shopCreateSchemaWithLocation,
+  shopOwnerShopRegistrationSchema,
   toIsoDate,
   userCreateSchema,
 } from "@/utils/validators";
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const shopValidationResult =
       userValidationResult.role === USER_ROLES.OWNER && shopData
-        ? await shopCreateSchemaWithLocation.validate(shopData)
+        ? await shopOwnerShopRegistrationSchema.validate(shopData)
         : null;
 
     const result = await registerUserWithOptionalShop(
