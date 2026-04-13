@@ -132,27 +132,46 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (normalized.categoryIds.length > 1) {
+        {
             const catCol = env.FIREBASE_MENU_CATEGORIES_COLLECTION_ID;
             const snaps = await Promise.all(
                 normalized.categoryIds.map((id) =>
                     db.collection(catCol).doc(id).get(),
                 ),
             );
-            const hasSingleOnly = snaps.some((snap) => {
-                if (!snap.exists) return false;
-                const d = snap.data() as { isMultiSelectable?: boolean };
-                return d?.isMultiSelectable === false;
-            });
-            if (hasSingleOnly) {
+            const missing = snaps.some((s) => !s.exists);
+            if (missing) {
                 return NextResponse.json(
-                    {
-                        success: false,
-                        error:
-                            "A category that does not allow multiple selection cannot be combined with other categories.",
-                    },
+                    { success: false, error: "One or more categories not found." },
                     { status: 400 },
                 );
+            }
+            type CatMeta = { groupType: string; multi: boolean };
+            const metas: CatMeta[] = snaps.map((snap) => {
+                const d = (snap.data() || {}) as {
+                    groupType?: string;
+                    isMultiSelectable?: boolean;
+                };
+                const groupType = String(d.groupType ?? "").trim() || "__unknown__";
+                const multi = d.isMultiSelectable === true;
+                return { groupType, multi };
+            });
+            if (normalized.categoryIds.length > 1) {
+                for (let i = 0; i < metas.length; i++) {
+                    if (metas[i]!.multi) continue;
+                    const gk = metas[i]!.groupType;
+                    const sameGroup = metas.filter((m) => m.groupType === gk).length;
+                    if (sameGroup > 1) {
+                        return NextResponse.json(
+                            {
+                                success: false,
+                                error:
+                                    "For categories with isMultiSelectable false, only one selection is allowed per group type.",
+                            },
+                            { status: 400 },
+                        );
+                    }
+                }
             }
         }
 

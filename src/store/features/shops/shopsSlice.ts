@@ -74,15 +74,20 @@ export const fetchShopsThunk = createAsyncThunk<
       params.set("search", search.trim())
     }
 
-    const { data } = await axiosClient.get(`${API_ENDPOINTS.shops.list}?${params.toString()}`)
+    const { data: body } = await axiosClient.get(
+      `${API_ENDPOINTS.shops.list}?${params.toString()}`,
+    )
+
+    // API shape: { success, data: { items, pagination } }
+    const list = body?.data ?? body
 
     return {
-      items: data?.items || [],
+      items: list?.items || [],
       pagination: {
-        page: Number(data?.pagination?.page || page),
-        limit: Number(data?.pagination?.limit || limit),
-        total: Number(data?.pagination?.total || 0),
-        totalPages: Math.max(1, Number(data?.pagination?.totalPages || 1)),
+        page: Number(list?.pagination?.page || page),
+        limit: Number(list?.pagination?.limit || limit),
+        total: Number(list?.pagination?.total || 0),
+        totalPages: Math.max(1, Number(list?.pagination?.totalPages || 1)),
       },
     }
   } catch (error) {
@@ -96,8 +101,13 @@ export const fetchShopByIdThunk = createAsyncThunk<
   { rejectValue: string }
 >("shops/fetchById", async (id, { rejectWithValue }) => {
   try {
-    const { data } = await axiosClient.get(API_ENDPOINTS.shops.detail(id))
-    return data
+    const { data: body } = await axiosClient.get(API_ENDPOINTS.shops.detail(id))
+    // API shape: { success, data: shop } or legacy flat shop
+    const shop = body?.data ?? body
+    if (!shop || typeof shop !== "object") {
+      return rejectWithValue("Invalid shop response")
+    }
+    return shop as AdminShop
   } catch (error) {
     return rejectWithValue(getErrorMessage(error))
   }

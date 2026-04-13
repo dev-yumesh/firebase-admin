@@ -11,7 +11,8 @@ interface InputProps {
   className?: string;
   min?: string;
   max?: string;
-  step?: number;
+  /** Use `"any"` with fractional `min` so values like `1` are valid (default step `1` would only allow 0.01, 1.01, …). */
+  step?: number | "any";
   disabled?: boolean;
   success?: boolean;
   error?: boolean;

@@ -29,7 +29,33 @@ export async function GET(req: NextRequest) {
     // ownerUID filter is used for the "single shop by owner" lookup.
 
     // -------------------------
-    // GET Single Shop
+    // GET Single Shop by document id (?id=)
+    // -------------------------
+    if (id) {
+      const doc = await db.collection(COLLECTION).doc(id).get();
+
+      if (!doc.exists) {
+        return NextResponse.json(
+          { success: false, error: "Shop not found" },
+          { status: 404 },
+        );
+      }
+
+      const docData: any = doc.data() || {};
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: doc.id,
+          ...docData,
+          createdAt: toIsoDate(docData.createdAt),
+          updatedAt: toIsoDate(docData.updatedAt),
+        },
+      });
+    }
+
+    // -------------------------
+    // GET Single Shop by owner UID (?ownerId= as auth uid)
     // -------------------------
     if (ownerId) {
       const snapshot = await db

@@ -4,7 +4,7 @@ import AddMenuItemForm from "@/components/form/AddMenuItemForm";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PanelResourceListPage, {
   type ResourceColumn,
 } from "./PanelResourceListPage";
@@ -31,6 +31,37 @@ const PAGE_SIZE = 10;
 export default function MenuItemsListPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [categoryTitleById, setCategoryTitleById] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `${API_ENDPOINTS.menuCategories.list}?page=1&limit=500`,
+        );
+        const json = (await res.json()) as {
+          success?: boolean;
+          data?: { items?: { id?: string; title?: string }[] };
+        };
+        if (!res.ok || !json.success || !json.data?.items) return;
+        const map: Record<string, string> = {};
+        for (const c of json.data.items) {
+          const id = c.id != null ? String(c.id) : "";
+          if (!id) continue;
+          map[id] = (c.title && String(c.title).trim()) || id;
+        }
+        if (!cancelled) setCategoryTitleById(map);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const columns = useMemo<ResourceColumn<MenuItemRow>[]>(
     () => [
@@ -70,10 +101,34 @@ export default function MenuItemsListPage() {
       {
         header: "Categories",
         accessor: "categoryIds",
-        render: (row) =>
-          Array.isArray(row.categoryIds) && row.categoryIds.length
-            ? row.categoryIds.join(", ")
-            : "—",
+        render: (row) => {
+          if (!Array.isArray(row.categoryIds) || !row.categoryIds.length) {
+            return "—";
+          }
+          const ids = row.categoryIds;
+          const labels = ids.map(
+            (id) => categoryTitleById[String(id)] ?? String(id),
+          );
+          const badgeColors = [
+            "primary",
+            "info",
+            "success",
+            "warning",
+          ] as const;
+          return (
+            <div className="flex max-w-[min(280px,100%)] flex-wrap gap-1.5">
+              {labels.map((label, i) => (
+                <Badge
+                  key={`${row.id}-${ids[i]}`}
+                  size="sm"
+                  color={badgeColors[i % badgeColors.length]}
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
       },
       {
         header: "Active",
@@ -116,7 +171,7 @@ export default function MenuItemsListPage() {
             : "—",
       },
     ],
-    [],
+    [categoryTitleById],
   );
 
   const loadData = useCallback(

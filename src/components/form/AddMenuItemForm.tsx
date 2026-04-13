@@ -23,24 +23,42 @@ const SERVING_UNIT_OPTIONS: SERVING_UNIT[] = [
 ];
 
 type ShopOption = { id: string; shopName?: string };
-type CategoryOption = { id: string; title?: string; isMultiSelectable?: boolean };
+type CategoryOption = {
+  id: string;
+  title?: string;
+  groupType?: string;
+  isMultiSelectable?: boolean;
+};
 
-function isSingleSelectCategory(c: CategoryOption | undefined): boolean {
-  return c?.isMultiSelectable === false;
+/** Only explicit `true` allows multiple picks from the same groupType. */
+function allowsMultiInGroup(c: CategoryOption | undefined): boolean {
+  return c?.isMultiSelectable === true;
 }
 
-/** If any selected category is single-only, selection must be exactly that one. */
+function groupTypeKey(c: CategoryOption | undefined): string {
+  const g = c?.groupType?.trim();
+  return g || "__unknown_group__";
+}
+
+/** Enforce: for each groupType with isMultiSelectable !== true, at most one selected id. */
 function validateCategorySelection(
   ids: string[],
   allCategories: CategoryOption[],
 ): string | null {
   if (ids.length <= 1) return null;
-  const hasExclusive = ids.some((id) => {
-    const c = allCategories.find((x) => x.id === id);
-    return isSingleSelectCategory(c);
-  });
-  if (hasExclusive) {
-    return "Some categories don’t allow combining with others. Select only one category, or remove single-select categories to pick multiple.";
+  const metas = ids.map((id) => ({
+    id,
+    cat: allCategories.find((x) => x.id === id),
+  }));
+  for (const { id, cat } of metas) {
+    if (allowsMultiInGroup(cat)) continue;
+    const gk = groupTypeKey(cat);
+    const sameGroup = metas.filter(
+      (m) => groupTypeKey(m.cat) === gk,
+    );
+    if (sameGroup.length > 1) {
+      return `Only one category allowed from this group (${gk === "__unknown_group__" ? "unknown type" : gk}).`;
+    }
   }
   return null;
 }
@@ -160,15 +178,18 @@ export default function AddMenuItemForm({ isOpen, onClose, onCreated }: Props) {
         return prev.filter((x) => x !== id);
       }
       const cat = categories.find((c) => c.id === id);
-      if (isSingleSelectCategory(cat)) {
-        return [id];
+      if (!cat) {
+        return [...prev, id];
       }
-      const withoutExclusive = prev.filter((pid) => {
-        const p = categories.find((c) => c.id === pid);
-        return !isSingleSelectCategory(p);
-      });
-      if (withoutExclusive.includes(id)) return withoutExclusive;
-      return [...withoutExclusive, id];
+      if (!allowsMultiInGroup(cat)) {
+        const gk = groupTypeKey(cat);
+        const withoutSameGroup = prev.filter((pid) => {
+          const p = categories.find((c) => c.id === pid);
+          return groupTypeKey(p) !== gk;
+        });
+        return [...withoutSameGroup, id];
+      }
+      return [...prev, id];
     });
   }
 
@@ -361,9 +382,11 @@ export default function AddMenuItemForm({ isOpen, onClose, onCreated }: Props) {
           <div>
             <Label>Categories</Label>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Categories marked “single only” (
-              <code className="text-xs">isMultiSelectable: false</code>) cannot
-              be combined with other categories.
+              <code className="text-xs">isMultiSelectable: false</code> means one
+              category per <span className="font-medium">group type</span> (e.g.
+              one dietary). You can still pick categories from other groups.
+              When <code className="text-xs">true</code>, multiple from the same
+              group are allowed.
             </p>
             <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 dark:border-gray-700">
               {categories.length === 0 ? (
@@ -382,11 +405,15 @@ export default function AddMenuItemForm({ isOpen, onClose, onCreated }: Props) {
                     />
                     <span className="flex flex-wrap items-center gap-2">
                       {c.title || c.id}
-                      {isSingleSelectCategory(c) ? (
+                      {!allowsMultiInGroup(c) ? (
                         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-theme-xs text-gray-600 dark:bg-white/10 dark:text-gray-400">
-                          Single only
+                          One per group
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-theme-xs text-brand-800 dark:bg-brand-500/15 dark:text-brand-200">
+                          Multi in group
+                        </span>
+                      )}
                     </span>
                   </label>
                 ))
@@ -401,6 +428,7 @@ export default function AddMenuItemForm({ isOpen, onClose, onCreated }: Props) {
                 id="mi-serving-qty"
                 type="number"
                 min="0.01"
+                step="any"
                 value={servingQuantity}
                 onChange={(e) => setServingQuantity(e.target.value)}
                 className="mt-1.5"
