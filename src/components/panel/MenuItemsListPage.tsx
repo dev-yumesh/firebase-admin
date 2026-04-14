@@ -22,9 +22,28 @@ export type MenuItemRow = {
   status?: string;
   servingQuantity?: number;
   servingUnit?: string;
+  medias?: { url?: string; isPrimary?: boolean; type?: string }[];
+  photo?: string;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
+
+function menuItemThumbUrl(row: MenuItemRow): string | null {
+  const medias = row.medias;
+  if (Array.isArray(medias) && medias.length) {
+    const withUrl = medias.filter(
+      (m) => m && typeof m.url === "string" && m.url.trim(),
+    );
+    const primary = withUrl.find((m) => m.isPrimary);
+    const image = withUrl.find((m) => m.type !== "video");
+    const pick = primary ?? image ?? withUrl[0];
+    if (pick?.url) return pick.url.trim();
+  }
+  if (typeof row.photo === "string" && row.photo.trim()) {
+    return row.photo.trim();
+  }
+  return null;
+}
 
 const PAGE_SIZE = 10;
 
@@ -65,6 +84,30 @@ export default function MenuItemsListPage() {
 
   const columns = useMemo<ResourceColumn<MenuItemRow>[]>(
     () => [
+      {
+        header: "Image",
+        accessor: "medias",
+        className: "w-[72px] min-w-[72px]",
+        render: (row) => {
+          const url = menuItemThumbUrl(row);
+          if (!url) {
+            return (
+              <span className="text-theme-xs text-gray-400 dark:text-gray-500">
+                —
+              </span>
+            );
+          }
+          return (
+            // eslint-disable-next-line @next/next/no-img-element -- remote Firebase URLs
+            <img
+              src={url}
+              alt={row.name ? `${row.name} thumbnail` : "Menu item"}
+              className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-gray-200 dark:ring-gray-600"
+              loading="lazy"
+            />
+          );
+        },
+      },
       {
         header: "Name",
         accessor: "name",

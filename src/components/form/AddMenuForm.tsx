@@ -8,7 +8,15 @@ import FileInput from "./input/FileInput";
 import Switch from "./switch/Switch";
 import Alert from "../ui/alert/Alert";
 import Select from "./Select";
-import { MENU_CATEGORY_GROUP_TYPE } from "@/constants/enums";
+import {
+  MENU_CATEGORY_GROUP_CONFIG,
+  MENU_CATEGORY_GROUP_TYPE,
+} from "@/constants/enums";
+
+function isMultiSelectableForGroupType(groupType: string): boolean {
+  const key = groupType as keyof typeof MENU_CATEGORY_GROUP_CONFIG;
+  return MENU_CATEGORY_GROUP_CONFIG[key]?.isMultiSelectable === true;
+}
 
 interface AddMenuFormProps {
   isOpen: boolean;
@@ -33,10 +41,13 @@ interface AddMenuFormProps {
 }
 
 const GROUP_TYPE_OPTIONS = Object.values(MENU_CATEGORY_GROUP_TYPE).map(
-  (value) => ({
-    value,
-    label: value.replace(/_/g, " "),
-  }),
+  (value) => {
+    const key = value as keyof typeof MENU_CATEGORY_GROUP_CONFIG;
+    return {
+      value,
+      label: MENU_CATEGORY_GROUP_CONFIG[key]?.label ?? value.replace(/_/g, " "),
+    };
+  },
 );
 
 const DEFAULT_GROUP_TYPE = MENU_CATEGORY_GROUP_TYPE.DIETARY_BASED;
@@ -93,6 +104,7 @@ const AddMenuForm = ({
     });
 
     if (mode === "edit" && initialData) {
+      const groupType = initialData.groupType ?? DEFAULT_GROUP_TYPE;
       setFormData({
         slug: initialData.slug ?? "",
         title: initialData.title ?? "",
@@ -102,10 +114,10 @@ const AddMenuForm = ({
         imageFile: null,
         icon: initialData.icon ?? "",
         color: initialData.color ?? "#22c55e",
-        groupType: initialData.groupType ?? DEFAULT_GROUP_TYPE,
+        groupType,
         isSystemDefined: initialData.isSystemDefined ?? false,
         isFilterable: initialData.isFilterable ?? true,
-        isMultiSelectable: initialData.isMultiSelectable ?? false,
+        isMultiSelectable: isMultiSelectableForGroupType(groupType),
       });
       setPreviewUrl(initialData.logo ?? null);
       return;
@@ -123,13 +135,19 @@ const AddMenuForm = ({
       groupType: DEFAULT_GROUP_TYPE,
       isSystemDefined: false,
       isFilterable: true,
-      isMultiSelectable: false,
+      isMultiSelectable: isMultiSelectableForGroupType(DEFAULT_GROUP_TYPE),
     });
 
   }, [isOpen, initialData, mode]);
 
   const handleChange = (key: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "groupType") {
+        next.isMultiSelectable = isMultiSelectableForGroupType(String(value));
+      }
+      return next;
+    });
 
     if (key === "imageFile") {
       if (value instanceof File) {
@@ -156,7 +174,11 @@ const AddMenuForm = ({
     setError(null);
     setSaving(true);
     try {
-      await handleSave(formData);
+      const payload = {
+        ...formData,
+        isMultiSelectable: isMultiSelectableForGroupType(formData.groupType),
+      };
+      await handleSave(payload);
       closeModal();
     } catch (err: any) {
       const message =
@@ -247,6 +269,15 @@ const AddMenuForm = ({
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Helps grouping similar menu filters.
               </p>
+              <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-300">
+                <span className="font-medium">Menu item selection: </span>
+                {formData.isMultiSelectable
+                  ? "Multiple categories from this group can be selected."
+                  : "Only one category from this group can be selected."}{" "}
+                <span className="text-gray-400 dark:text-gray-500">
+                  (Set by group type.)
+                </span>
+              </p>
             </div>
 
             {/* Icon */}
@@ -299,14 +330,6 @@ const AddMenuForm = ({
                   defaultChecked={formData.isFilterable}
                   onChange={(checked: boolean) =>
                     handleChange("isFilterable", checked)
-                  }
-                />
-                <Switch
-                  label="Multi Selectable"
-                  checked={formData.isMultiSelectable}
-                  defaultChecked={formData.isMultiSelectable}
-                  onChange={(checked: boolean) =>
-                    handleChange("isMultiSelectable", checked)
                   }
                 />
                 <Switch
