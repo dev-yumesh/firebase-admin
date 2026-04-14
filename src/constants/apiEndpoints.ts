@@ -12,8 +12,8 @@ export const API_ENDPOINTS = {
     shopOwnerRegister: `${AUTH_BASE}/register`,
   },
   shops: {
-    list: "/api/v1/shop",
-    detail: (id: string | number) => `/api/v1/shop?id=${encodeURIComponent(String(id))}`,
+    list: "/api/v1/shops",
+    detail: (id: string | number) => `/api/v1/shops?id=${encodeURIComponent(String(id))}`,
   },
   menuCategories: {
     list: "/api/v1/menu-categories",
