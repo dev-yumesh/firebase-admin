@@ -7,12 +7,18 @@ import Button from "@/components/ui/button/Button";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { SHOP_TYPES } from "@/constants/enums";
 import {
+  attachPlacesAutocomplete,
+  getDefaultGooglePlacesApiKey,
+  loadGoogleMapsPlaces,
+} from "@/lib/locationServices";
+import {
   ChevronLeft,
   ChefHat,
   CheckCircle2,
   Loader2,
   MapPin,
   QrCode,
+  Search,
   Sparkles,
   Store,
   UtensilsCrossed,
@@ -51,6 +57,14 @@ export default function SignUpForm() {
   const accountRef = useRef<HTMLElement>(null);
   const shopRef = useRef<HTMLElement>(null);
   const locationRef = useRef<HTMLElement>(null);
+  const placesSearchInputRef = useRef<HTMLInputElement>(null);
+
+  const [placesSearchHint, setPlacesSearchHint] = useState<string | null>(() => {
+    const k = getDefaultGooglePlacesApiKey()?.trim();
+    return k
+      ? null
+      : "Add NEXT_PUBLIC_GOOGLE_PLACE_API_KEY to enable address search.";
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -124,6 +138,47 @@ export default function SignUpForm() {
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => {
+    const apiKey = getDefaultGooglePlacesApiKey()?.trim();
+    if (!apiKey || !placesSearchInputRef.current) return;
+
+    let cancelled = false;
+    let detach: (() => void) | undefined;
+
+    (async () => {
+      try {
+        await loadGoogleMapsPlaces(apiKey);
+        if (cancelled) return;
+        const el = placesSearchInputRef.current;
+        if (!el) return;
+        detach = attachPlacesAutocomplete(el, {
+          country: "in",
+          onPlaceSelected: (p) => {
+            setCity(p.city);
+            setState(p.state);
+            setPincode(p.pincode);
+            setLocality(p.locality);
+            setLatitude(p.latitude);
+            setLongitude(p.longitude);
+            setGoogleMapLocation(p.googleMapLocation);
+          },
+        });
+        setPlacesSearchHint(null);
+      } catch {
+        if (!cancelled) {
+          setPlacesSearchHint(
+            "Address search could not load. Check the API key and Places/Maps JavaScript billing.",
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      detach?.();
+    };
+  }, []);
+
   function scrollToSection(ref: React.RefObject<HTMLElement | null>) {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -148,11 +203,16 @@ export default function SignUpForm() {
       !password ||
       !shopName.trim() ||
       !city.trim() ||
-      !state.trim() ||
-      !latitude.trim() ||
-      !longitude.trim()
+      !state.trim()
     ) {
       flashError("Please fill all required fields.");
+      return;
+    }
+
+    if (!latitude.trim() || !longitude.trim()) {
+      flashError(
+        'Use "Search location" above and pick a place so we can save map coordinates.',
+      );
       return;
     }
 
@@ -169,7 +229,7 @@ export default function SignUpForm() {
     const lat = Number(latitude);
     const lng = Number(longitude);
     if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      flashError("Latitude and longitude must be valid numbers.");
+      flashError("Location coordinates look invalid. Search and select your address again.");
       return;
     }
 
@@ -603,11 +663,36 @@ export default function SignUpForm() {
                     Location
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Pin on the map
+                    Search with Google, then review or edit the fields below
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Label>Search location</Label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                    <input
+                      ref={placesSearchInputRef}
+                      type="text"
+                      name="places-search"
+                      autoComplete="off"
+                      disabled={!getDefaultGooglePlacesApiKey()?.trim()}
+                      placeholder="Start typing address or landmark…"
+                      className="h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    />
+                  </div>
+                  {placesSearchHint ? (
+                    <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                      {placesSearchHint}
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      Pick a suggestion to auto-fill city, state, pincode, coordinates, and
+                      maps link.
+                    </p>
+                  )}
+                </div>
                 <div className="sm:col-span-2">
                   <Label>
                     City<span className="text-error-500">*</span>
@@ -642,30 +727,6 @@ export default function SignUpForm() {
                     type="text"
                     value={locality}
                     onChange={(e) => setLocality(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>
-                    Latitude<span className="text-error-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    step={0.000001}
-                    value={latitude}
-                    onChange={(e) => setLatitude(e.target.value)}
-                    placeholder="e.g. 28.6139"
-                  />
-                </div>
-                <div>
-                  <Label>
-                    Longitude<span className="text-error-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    step={0.000001}
-                    value={longitude}
-                    onChange={(e) => setLongitude(e.target.value)}
-                    placeholder="e.g. 77.2090"
                   />
                 </div>
                 <div className="sm:col-span-2">
