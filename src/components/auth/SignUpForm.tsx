@@ -300,9 +300,9 @@ export default function SignUpForm() {
     "hover:border-brand-200/80 hover:shadow-md dark:hover:border-brand-500/25";
 
   return (
-    <div className="flex min-h-screen w-full flex-col lg:flex-row">
-      {/* Decorative panel — desktop */}
-      <aside className="relative hidden overflow-hidden lg:flex lg:w-[42%] xl:w-[38%] lg:shrink-0 lg:flex-col lg:justify-between bg-gradient-to-br from-[#0f1419] via-[#1a2332] to-[#0d3d2e] px-10 py-12 text-white">
+    <div className="flex min-h-screen w-full flex-col lg:h-dvh lg:min-h-0 lg:max-h-dvh lg:flex-row lg:overflow-hidden">
+      {/* Decorative panel — desktop: exactly one viewport tall, never scrolls */}
+      <aside className="relative hidden min-h-0 overflow-hidden lg:flex lg:h-full lg:w-[42%] xl:w-[38%] lg:shrink-0 lg:flex-col lg:justify-between bg-gradient-to-br from-[#0f1419] via-[#1a2332] to-[#0d3d2e] px-10 py-12 text-white">
         <div className="pointer-events-none absolute inset-0 opacity-90">
           <div className="signup-float-slow absolute -left-20 top-20 h-72 w-72 rounded-full bg-brand-500/25 blur-3xl" />
           <div className="signup-float-delayed absolute -right-16 bottom-32 h-64 w-64 rounded-full bg-emerald-500/20 blur-3xl" />
@@ -339,8 +339,8 @@ export default function SignUpForm() {
         </ul>
       </aside>
 
-      {/* Form column */}
-      <div className="relative flex flex-1 flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+      {/* Form column — scrolls on desktop when content is tall */}
+      <div className="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 lg:overflow-y-auto lg:overscroll-contain">
         {/* Mobile hero */}
         <div className="relative mx-4 mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-brand-900 px-5 py-5 text-white shadow-lg lg:hidden">
           <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-brand-500/30 blur-2xl" />
@@ -361,60 +361,86 @@ export default function SignUpForm() {
             Back to home
           </Link>
 
-          <header className="mb-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-              Create your account
-            </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Three quick steps — you can jump between sections anytime.
-            </p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200/80 dark:bg-gray-800">
+          {/* Stays under “Back to home”; sticks to top of scroll area (form column on lg, viewport on mobile) */}
+          <div
+            className={
+              "sticky top-0 z-30 -mx-4 mb-8 border-b border-gray-200/90 bg-white/85 px-4 py-4 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.12)] backdrop-blur-lg " +
+              "dark:border-gray-800/90 dark:bg-gray-950/85 dark:shadow-[0_12px_32px_-16px_rgba(0,0,0,0.45)] " +
+              "sm:-mx-6 sm:px-6 sm:py-5 lg:-mx-10 lg:px-10"
+            }
+          >
+            <div className="flex items-start justify-between gap-4">
+              <header className="min-w-0 flex-1">
+                <h1 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-2xl lg:text-3xl">
+                  Create your account
+                </h1>
+                <p className="mt-1 max-w-md text-xs leading-relaxed text-gray-600 dark:text-gray-400 sm:text-sm">
+                  Three quick steps — jump between sections anytime.
+                </p>
+              </header>
               <div
-                className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 transition-all duration-500 ease-out"
+                className="flex shrink-0 flex-col items-end gap-1 rounded-2xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-white px-3 py-2 dark:border-brand-500/25 dark:from-brand-500/10 dark:to-gray-900/80"
+                aria-label={`Form ${formProgress} percent complete`}
+              >
+                <span className="text-[10px] font-medium uppercase tracking-wide text-brand-600/80 dark:text-brand-300/90">
+                  Progress
+                </span>
+                <span className="text-lg font-bold tabular-nums leading-none text-brand-600 dark:text-brand-300">
+                  {formProgress}
+                  <span className="text-sm font-semibold">%</span>
+                </span>
+              </div>
+            </div>
+
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200/90 dark:bg-gray-800"
+              role="progressbar"
+              aria-valuenow={formProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-brand-500 to-emerald-400 transition-[width] duration-500 ease-out"
                 style={{ width: `${formProgress}%` }}
               />
             </div>
-            <p className="mt-1.5 text-right text-xs text-gray-500 dark:text-gray-500">
-              {formProgress}% complete
-            </p>
-          </header>
 
-          {/* Step chips */}
-          <nav
-            className="mb-8 flex flex-wrap gap-2"
-            aria-label="Form sections"
-          >
-            {steps.map((step, i) => {
-              const active = activeStep === i;
-              const Icon = step.Icon;
-              return (
-                <button
-                  key={step.id}
-                  type="button"
-                  onClick={() => scrollToSection(step.ref)}
-                  className={
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-200 sm:text-sm " +
-                    (active
-                      ? "border-brand-500 bg-brand-50 text-brand-800 shadow-sm ring-2 ring-brand-500/20 dark:bg-brand-500/15 dark:text-brand-100"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-brand-200 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-500/40")
-                  }
-                >
-                  <span
+            <nav
+              className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
+              aria-label="Form sections"
+            >
+              {steps.map((step, i) => {
+                const active = activeStep === i;
+                const Icon = step.Icon;
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => scrollToSection(step.ref)}
                     className={
-                      "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold " +
+                      "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-200 sm:text-sm " +
                       (active
-                        ? "bg-brand-500 text-white"
-                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400")
+                        ? "border-brand-500 bg-brand-50 text-brand-800 shadow-sm ring-2 ring-brand-500/20 dark:bg-brand-500/15 dark:text-brand-100"
+                        : "border-gray-200 bg-white/90 text-gray-600 hover:border-brand-200 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300 dark:hover:border-brand-500/40")
                     }
                   >
-                    {i + 1}
-                  </span>
-                  <Icon className="hidden h-4 w-4 sm:block" aria-hidden />
-                  {step.label}
-                </button>
-              );
-            })}
-          </nav>
+                    <span
+                      className={
+                        "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold " +
+                        (active
+                          ? "bg-brand-500 text-white"
+                          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400")
+                      }
+                    >
+                      {i + 1}
+                    </span>
+                    <Icon className="hidden h-4 w-4 sm:block" aria-hidden />
+                    {step.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
           {apiError && (
             <div
