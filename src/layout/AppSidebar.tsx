@@ -89,6 +89,7 @@ const AppSidebar: React.FC = () => {
       path: `${b}/tables`,
     };
 
+    /* superadmin: all tenants + users + app settings. owner (shop panel): own shops/data only (API-enforced). */
     if (role === "superadmin") {
       return [
         dashboard,
@@ -117,7 +118,6 @@ const AppSidebar: React.FC = () => {
     return [
       dashboard,
       shops,
-      menuCategories,
       menuItems,
       tables,
       orders,

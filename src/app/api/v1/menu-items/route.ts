@@ -1,5 +1,12 @@
 import { env } from "@/config/env.config";
 import { db } from "@/lib/firebaseAdmin";
+import {
+  assertMenuItemShopAccess,
+  getShopDocIdsForCaller,
+  isSuperRole,
+  requireApiCaller,
+  type ApiCaller,
+} from "@/lib/apiRouteAuth";
 import { removeUndefinedFields, toIsoDate } from "@/utils/validators";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -106,8 +113,21 @@ const normalizeDoc = (doc: any) => {
     };
 };
 
+async function filterMenuItemsByShops<T extends { shopId?: string }>(
+    items: T[],
+    caller: ApiCaller,
+): Promise<T[]> {
+    if (isSuperRole(caller.role)) return items;
+    const shopIds = await getShopDocIdsForCaller(caller);
+    const allow = new Set(shopIds);
+    return items.filter((item) => allow.has(String(item.shopId || "")));
+}
+
 export async function POST(req: NextRequest) {
     try {
+        const caller = await requireApiCaller(req);
+        if (caller instanceof NextResponse) return caller;
+
         const body = await req.json();
         const normalized = normalizeCreateBody(
             body && typeof body === "object" ? body : {},
@@ -131,6 +151,9 @@ export async function POST(req: NextRequest) {
                 { status: 400 },
             );
         }
+
+        const shopGate = await assertMenuItemShopAccess(caller, normalized.shopId);
+        if (shopGate !== true) return shopGate;
 
         {
             const catCol = env.FIREBASE_MENU_CATEGORIES_COLLECTION_ID;
@@ -206,6 +229,9 @@ export async function POST(req: NextRequest) {
 // Get single item (?id=...) or paginated list (?page=1&limit=10&search=...)
 export async function GET(req: NextRequest) {
     try {
+        const caller = await requireApiCaller(req);
+        if (caller instanceof NextResponse) return caller;
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
 
@@ -218,6 +244,10 @@ export async function GET(req: NextRequest) {
                     { status: 404 }
                 );
             }
+
+            const shopId = String((doc.data() || {}).shopId || "");
+            const shopGate = await assertMenuItemShopAccess(caller, shopId);
+            if (shopGate !== true) return shopGate;
 
             return NextResponse.json({
                 success: true,
@@ -241,9 +271,10 @@ export async function GET(req: NextRequest) {
             .get();
 
         const allItems = snapshot.docs.map((doc) => normalizeDoc(doc));
+        const scopedItems = await filterMenuItemsByShops(allItems, caller);
 
         const filteredItems = search
-            ? allItems.filter((item: any) => {
+            ? scopedItems.filter((item: any) => {
                   const title = String(item.title || "").toLowerCase();
                   const name = String(item.name || "").toLowerCase();
                   const description = String(item.description || "").toLowerCase();
@@ -264,7 +295,7 @@ export async function GET(req: NextRequest) {
                       slug.includes(search)
                   );
               })
-            : allItems;
+            : scopedItems;
 
         const total = filteredItems.length;
         const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -298,6 +329,9 @@ export async function GET(req: NextRequest) {
 // Update item (?id=...)
 export async function PUT(req: NextRequest) {
     try {
+        const caller = await requireApiCaller(req);
+        if (caller instanceof NextResponse) return caller;
+
         const { searchParams } = new URL(req.url);
         const body: any = await req.json();
         const id = searchParams.get("id") || body.id;
@@ -313,6 +347,10 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
+        const originalShopId = String((existing.data() || {}).shopId || "");
+        const shopGate = await assertMenuItemShopAccess(caller, originalShopId);
+        if (shopGate !== true) return shopGate;
+
         const raw =
             body && typeof body === "object"
                 ? { ...body, id: undefined, createdAt: undefined }
@@ -322,6 +360,13 @@ export async function PUT(req: NextRequest) {
             ...raw,
         };
         const normalized = normalizeCreateBody(mergedForNormalize as any);
+        if (
+            !isSuperRole(caller.role) &&
+            normalized.shopId &&
+            normalized.shopId !== originalShopId
+        ) {
+            return NextResponse.json({ error: "Cannot move item to another shop" }, { status: 403 });
+        }
         const updatePayload = removeUndefinedFields({
             ...normalized,
             updatedAt: new Date(),
@@ -338,6 +383,9 @@ export async function PUT(req: NextRequest) {
 // Delete item (?id=...)
 export async function DELETE(req: NextRequest) {
     try {
+        const caller = await requireApiCaller(req);
+        if (caller instanceof NextResponse) return caller;
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
 
@@ -351,6 +399,10 @@ export async function DELETE(req: NextRequest) {
         if (!existing.exists) {
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
+
+        const shopId = String((existing.data() || {}).shopId || "");
+        const shopGate = await assertMenuItemShopAccess(caller, shopId);
+        if (shopGate !== true) return shopGate;
 
         await docRef.delete();
         return NextResponse.json({ message: "Item deleted" });

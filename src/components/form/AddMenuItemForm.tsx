@@ -2,6 +2,7 @@
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { env } from "@/config/env.config";
+import { authHeadersJson } from "@/lib/clientAuthHeaders";
 import { useMedia } from "@/hooks/useMedia";
 import { ID } from "@/lib/firebaseMediaClient";
 import type { SERVING_UNIT } from "@/models/model";
@@ -117,8 +118,12 @@ export default function AddMenuItemForm({ isOpen, onClose, onCreated }: Props) {
     setLoadMetaError(null);
     try {
       const [shopRes, catRes] = await Promise.all([
-        fetch(`${API_ENDPOINTS.shops.list}?page=1&limit=200`),
-        fetch(`${API_ENDPOINTS.menuCategories.list}?page=1&limit=500`),
+        fetch(`${API_ENDPOINTS.shops.list}?page=1&limit=200`, {
+          headers: authHeadersJson(),
+        }),
+        fetch(`${API_ENDPOINTS.menuCategories.list}?page=1&limit=500`, {
+          headers: authHeadersJson(),
+        }),
       ]);
       const shopJson = (await shopRes.json()) as {
         success?: boolean;
@@ -285,7 +290,7 @@ export default function AddMenuItemForm({ isOpen, onClose, onCreated }: Props) {
     try {
       const res = await fetch("/api/v1/menu-items", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeadersJson(),
         body: JSON.stringify(payload),
       });
       const json = (await res.json()) as {

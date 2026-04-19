@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, serverTimestamp } from "@/lib/firebaseAdmin";
+import { isSuperRole, requireApiCaller, requireSuperadmin } from "@/lib/apiRouteAuth";
 import {
   shopOwnerShopRegistrationSchema,
   toIsoDate,
@@ -17,6 +18,9 @@ const FB_SHOP_COLLECTION = env.FIREBASE_SHOP_COLLECTION_ID;
 
 export async function POST(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const body: Record<string, unknown> = await req.json();
     const userData = body.userData as Record<string, unknown> | undefined;
     const shopData = body.shopData as Record<string, unknown> | undefined;
@@ -67,6 +71,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const caller = await requireApiCaller(req);
+    if (caller instanceof NextResponse) return caller;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -98,6 +105,14 @@ export async function GET(req: NextRequest) {
       }
 
       const data: any = doc.data() || {};
+
+      if (!isSuperRole(caller.role)) {
+        const own =
+          doc.id === caller.firestoreUserId || String(data.uid || "") === caller.uid;
+        if (!own) {
+          return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -136,8 +151,15 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    const scopedUsers = isSuperRole(caller.role)
+      ? allUsers
+      : allUsers.filter(
+          (user: Record<string, unknown>) =>
+            user.id === caller.firestoreUserId || String(user.uid || "") === caller.uid,
+        );
+
     const filteredUsers = search
-      ? allUsers.filter((user: Record<string, unknown>) => {
+      ? scopedUsers.filter((user: Record<string, unknown>) => {
           const name = String(user.name || "").toLowerCase();
           const email = String(user.email || "").toLowerCase();
           const phone = String(user.phone || "").toLowerCase();
@@ -152,7 +174,7 @@ export async function GET(req: NextRequest) {
             status.includes(search)
           );
         })
-      : allUsers;
+      : scopedUsers;
 
     const total = filteredUsers.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -187,6 +209,9 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const body = await req.json();
 
     const { userDocId, updateUserData, updateShopData } = body;

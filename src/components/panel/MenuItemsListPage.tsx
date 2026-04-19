@@ -2,6 +2,7 @@
 
 import AddMenuItemForm from "@/components/form/AddMenuItemForm";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { authHeadersJson } from "@/lib/clientAuthHeaders";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -60,6 +61,7 @@ export default function MenuItemsListPage() {
       try {
         const res = await fetch(
           `${API_ENDPOINTS.menuCategories.list}?page=1&limit=500`,
+          { headers: authHeadersJson() },
         );
         const json = (await res.json()) as {
           success?: boolean;
@@ -227,9 +229,9 @@ export default function MenuItemsListPage() {
       limit: number;
       search: string;
     }) => {
-      const res = await fetch(
-        API_ENDPOINTS.menuItems.list({ page, limit, search }),
-      );
+      const res = await fetch(API_ENDPOINTS.menuItems.list({ page, limit, search }), {
+        headers: authHeadersJson(),
+      });
       const json = (await res.json()) as {
         success?: boolean;
         data?: {

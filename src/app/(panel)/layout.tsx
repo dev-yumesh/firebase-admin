@@ -27,7 +27,7 @@ function resolvePanelContext(pathname: string): {
       return { basePath: "/superadmin", role: "superadmin" };
     }
   }
-  return { basePath: "/admin", role: "admin" };
+  return { basePath: "/admin", role: "owner" };
 }
 
 export default function PanelLayout({
@@ -58,6 +58,15 @@ export default function PanelLayout({
       if (!valid) {
         const next = encodeURIComponent(pathname || "/admin/dashboard");
         router.replace(`/signin?next=${next}`);
+        return;
+      }
+      const sessionRole = valid.user.role?.toUpperCase() ?? "";
+      if (
+        pathname.startsWith("/superadmin") &&
+        sessionRole !== "SUPERADMIN" &&
+        sessionRole !== "ADMIN"
+      ) {
+        router.replace("/admin/dashboard");
       }
     })();
     return () => {

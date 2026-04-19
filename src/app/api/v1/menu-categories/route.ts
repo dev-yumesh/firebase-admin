@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, serverTimestamp } from "@/lib/firebaseAdmin";
 import { env } from "@/config/env.config";
+import { requireApiCaller, requireSuperadmin } from "@/lib/apiRouteAuth";
 
 const COLLECTION = env.FIREBASE_MENU_CATEGORIES_COLLECTION_ID;
 
@@ -37,6 +38,9 @@ const toIsoDate = (value: any): string | null => {
 // Create category
 export async function POST(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const body: any = await req.json();
 
     if (!body.slug) {
@@ -84,6 +88,9 @@ export async function POST(req: NextRequest) {
 // Get single category (by ?id=... or ?slug=...) or paginated list (?page=1&limit=10&search=...)
 export async function GET(req: NextRequest) {
   try {
+    const caller = await requireApiCaller(req);
+    if (caller instanceof NextResponse) return caller;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const slug = searchParams.get("slug");
@@ -206,6 +213,9 @@ export async function GET(req: NextRequest) {
 // Update category (?id=... or ?slug=...)
 export async function PUT(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const { searchParams } = new URL(req.url);
     const idFromQuery = searchParams.get("id");
     const slugFromQuery = searchParams.get("slug");
@@ -260,6 +270,9 @@ export async function PUT(req: NextRequest) {
 // Delete category (?id=... or ?slug=...)
 export async function DELETE(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const slug = searchParams.get("slug");

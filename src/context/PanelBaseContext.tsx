@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext } from "react";
 
-export type PanelRole = "superadmin" | "admin";
+/** `owner` = shop panel (`/admin/*`) for OWNER/MANAGER and similar; `superadmin` = platform panel. */
+export type PanelRole = "superadmin" | "owner";
 
 type PanelBaseValue = {
   basePath: string;

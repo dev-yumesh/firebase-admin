@@ -6,6 +6,7 @@ import {
   toIsoDate,
 } from "@/utils/validators";
 import { env } from "@/config/env.config";
+import { requireSuperadmin } from "@/lib/apiRouteAuth";
 
 const COLLECTION =
   env.FIREBASE_APP_SETTINGS_COLLECTION_ID;
@@ -22,6 +23,9 @@ const normalizeDoc = (doc: any) => {
 
 export async function POST(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const body: any = await req.json();
     const { errors, payload } = await buildAppSettingsPayload(body, true);
 
@@ -64,6 +68,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const { searchParams } = new URL(req.url);
     const id = normalizeString(searchParams.get("id"));
     const key = normalizeString(searchParams.get("key")).toUpperCase();
@@ -156,6 +163,9 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const { searchParams } = new URL(req.url);
     const body: any = await req.json();
     const id = normalizeString(searchParams.get("id") || body.id);
@@ -219,6 +229,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const authz = await requireSuperadmin(req);
+    if (authz instanceof NextResponse) return authz;
+
     const { searchParams } = new URL(req.url);
     const id = normalizeString(searchParams.get("id"));
 
