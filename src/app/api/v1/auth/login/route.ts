@@ -5,6 +5,7 @@ import {
   evaluateSessionAfterAuth,
   sessionGateErrorMessage,
 } from "@/lib/accountSessionGate";
+import { tryBootstrapSuperadminProfile } from "@/lib/superadminBootstrap";
 import { loginSchema } from "@/utils/validators";
 
 const FIREBASE_SIGN_IN_URL =
@@ -76,7 +77,14 @@ export async function POST(req: NextRequest) {
     }
 
     const uid = idJson.localId;
-    const gate = await evaluateSessionAfterAuth(uid);
+    let gate = await evaluateSessionAfterAuth(uid);
+
+    if (!gate.ok && gate.code === "NO_FIRESTORE_PROFILE") {
+      const bootstrapped = await tryBootstrapSuperadminProfile(uid, email);
+      if (bootstrapped) {
+        gate = await evaluateSessionAfterAuth(uid);
+      }
+    }
 
     if (!gate.ok) {
       return NextResponse.json(
